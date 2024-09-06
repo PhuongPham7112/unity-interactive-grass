@@ -3,25 +3,34 @@ Shader "Custom/GrassTessellation"
     // add exposed properties
     Properties
     {
+        _Color("Grass Color", Color) = (0, 1, 0 ,1)
+        _BezierControlV0("Curve Control Point 0", Vector) = (0, 0, 0)
+        _BezierControlV1("Curve Control Point 1", Vector) = (0, 0.5, 0)
+        _BezierControlV2("Curve Control Point 2", Vector) = (0, 1, 0)
         _EdgeFactors("Edge Factors", Vector) = (3, 3, 3)
         _InsideFactor("Inside Factor", Float) = 3
     }
-    SubShader
+        SubShader
     {
+        Cull Off
         Pass
         {
             HLSLPROGRAM
 
             // setup
+            //#pragma geometry geom
             #pragma vertex vert
             #pragma fragment frag
             #pragma hull hull
             #pragma domain domain
-            #pragma geometry geom
             #pragma target 5.0
             #include "UnityCG.cginc"
 
+            float3 _BezierControlV0;
+            float3 _BezierControlV1;
+            float3 _BezierControlV2;
             float3 _EdgeFactors;
+            float4 _Color;
             float _InsideFactor;
 
             #define BARYCENTRIC_INTERPOLATE(fieldName) \
@@ -57,6 +66,7 @@ Shader "Custom/GrassTessellation"
             };
 
 
+            // vertex shader
             TSControlPoint vert(appdata_full i)
             {
                 TSControlPoint tc;
@@ -85,6 +95,7 @@ Shader "Custom/GrassTessellation"
                 return f;
             }
 
+            // hull shader
             [domain("tri")]
             [partitioning("integer")]
             [outputtopology("triangle_cw")]
@@ -96,6 +107,7 @@ Shader "Custom/GrassTessellation"
             }
 
             /*
+                domain shader
             */
             [domain("tri")]
             TSInterpolators domain(TSFactors factors, // The output of the patch constant function
@@ -113,50 +125,61 @@ Shader "Custom/GrassTessellation"
                 return output;
             }
 
-            [maxvertexcount(200)]
-            void geom(triangle TSInterpolators IN[3], inout TriangleStream<GSOutput> triStream)
+            //[maxvertexcount(200)]
+            //void geom(triangle TSInterpolators IN[3], inout TriangleStream<GSOutput> triStream)
+            //{
+            //    GSOutput o;
+            //    float3 offset;
+
+            //    // newly generated geo
+            //    for (int i = 0; i < 3; i++)
+            //    {
+            //        if (i == 0)
+            //        {
+            //            offset = float3(0.1, 0, 0);
+            //        }
+            //        else if (i == 1)
+            //        {
+            //            offset = float3(-0.1, 0, 0);
+            //        }
+            //        else if (i == 2)
+            //        {
+            //            offset = float3(0, 0, .2);
+            //        }
+
+            //        float3 positionOS = mul(unity_WorldToObject, float4(IN[0].positionWS, 1.0)).xyz;
+            //        float3 vNormal = mul(unity_WorldToObject, float4(IN[0].normalWS, 1.0)).xyz;
+            //        float3 vTangent = mul(unity_WorldToObject, float4(IN[0].tangentWS, 1.0)).xyz;
+            //        float3 vBinormal = cross(vNormal, vTangent);
+
+            //        float3x3 tangentToObject = float3x3(
+            //            vTangent.x, vBinormal.x, vNormal.x,
+            //            vTangent.y, vBinormal.y, vNormal.y,
+            //            vTangent.z, vBinormal.z, vNormal.z
+            //            );
+
+            //        float3 offsetOS = mul(tangentToObject, offset);
+            //        o.positionCS = UnityObjectToClipPos(positionOS + offsetOS);
+            //        triStream.Append(o);
+            //    }
+            //    triStream.RestartStrip();
+
+            //    // already have geo
+            //    o.positionCS = IN[0].positionCS;
+            //    triStream.Append(o);
+
+            //    o.positionCS = IN[1].positionCS;
+            //    triStream.Append(o);
+
+            //    o.positionCS = IN[2].positionCS;
+            //    triStream.Append(o);
+
+            //    triStream.RestartStrip();
+            //}
+
+            float4 frag(TSInterpolators tc) : SV_Target
             {
-                GSOutput o;
-                float3 offset;
-
-                // newly generated geo
-                for (int i = 0; i < 3; i++)
-                {
-                    if (i == 0)
-                    {
-                        offset = float3(0.1, 0, 0);
-                    }
-                    else if (i == 1)
-                    {
-                        offset = float3(-0.1, 0, 0);
-                    }
-                    else if (i == 2)
-                    {
-                        offset = float3(0, 0.2, 0);
-                    }
-                    float3 positionOS = mul(unity_WorldToObject, float4(IN[0].positionWS, 1.0)).xyz;
-
-                    o.positionCS = UnityObjectToClipPos(positionOS + offset);
-                    triStream.Append(o);
-                }
-                triStream.RestartStrip();
-
-                // already have geo
-                o.positionCS = IN[0].positionCS;
-                triStream.Append(o);
-
-                o.positionCS = IN[1].positionCS;
-                triStream.Append(o);
-
-                o.positionCS = IN[2].positionCS;
-                triStream.Append(o);
-
-                triStream.RestartStrip();
-            }
-
-            float4 frag(GSOutput tc) : SV_Target
-            {
-                return 1.0 * float4(0, 1, 0, 1);
+                return _Color;
             }
 
             ENDHLSL
