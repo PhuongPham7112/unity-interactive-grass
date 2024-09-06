@@ -7,6 +7,7 @@ Shader "Custom/GrassTessellation"
         _BezierControlV0("Curve Control Point 0", Vector) = (0, 0, 0)
         _BezierControlV1("Curve Control Point 1", Vector) = (0, 0.7, 0)
         _BezierControlV2("Curve Control Point 2", Vector) = (0, 1, 0.3)
+        _Dimension("Grass Width & Height", Vector) = (0.1, 0.5, 0)
         _EdgeFactors("Edge Factors", Vector) = (3, 3, 3)
         _InsideFactor("Inside Factor", Float) = 3
     }
@@ -32,6 +33,7 @@ Shader "Custom/GrassTessellation"
             float3 _EdgeFactors;
             float4 _Color;
             float _InsideFactor;
+            float2 _Dimension;
 
             #define BARYCENTRIC_INTERPOLATE(fieldName) \
                     patch[0].fieldName * barycentricCoordinates.x + \
@@ -51,6 +53,7 @@ Shader "Custom/GrassTessellation"
                 float3 p = 2 * (1 - t) * (p1 - p0) + 2 * t * (p2 - p1);
                 return p;
             }
+
             struct TSControlPoint
             {
                 float3 positionWS: INTERNALTESSPOS;
@@ -83,18 +86,23 @@ Shader "Custom/GrassTessellation"
             TSControlPoint vert(appdata_full i)
             {
                 float t = i.texcoord.y;
-                float3 bp = BezierPoints(_BezierControlV0, _BezierControlV1, _BezierControlV2, t);
+
+                // De Casteljau's algorithm
+                float3 a = t * (_BezierControlV1 - _BezierControlV0) + _BezierControlV0;
+                float3 b = t * (_BezierControlV2 - _BezierControlV1) + _BezierControlV1;
+                float3 c = t * (b - a) + a;
+                float3 tangent = normalize(b - a);
+
+                float3 up = float3(0, 1, 0);
+                float3 binormal = normalize(cross(tangent, up));
+                float3 normal = normalize(cross(binormal, tangent)); // should be provided
                 
-                // find coordinate system
-                float3 tangent = normalize(BezierPointsDeriv(_BezierControlV0, _BezierControlV1, _BezierControlV2, t));
-                float3 up = float3(0, 1, 0); // TODO
-                float3 normal = normalize(cross(tangent, up));
-                float3 binormal = normalize(cross(normal, tangent));
-                float3 vertexOffset = i.vertex.x * binormal + i.vertex.y * normal + i.vertex.z * tangent;
+                float3 c_0 = c - _Dimension.x * binormal;
+                float3 c_1 = c + _Dimension.x * binormal;
                 
                 // output
                 TSControlPoint tc;
-                tc.positionWS = mul(unity_ObjectToWorld, i.vertex + float4(0, 0, 0, 0)).xyz;
+                tc.positionWS = mul(unity_ObjectToWorld, c_0 + c_1 * i.texcoord.x).xyz;
                 tc.color = float4(i.texcoord.y, i.texcoord.y, i.texcoord.y, 1);
                 tc.normalWS = UnityObjectToWorldNormal(i.normal);
                 tc.tangentWS = UnityObjectToWorldNormal(i.tangent);
