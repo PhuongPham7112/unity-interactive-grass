@@ -86,10 +86,13 @@ Shader "Custom/GrassTessellation"
             TSControlPoint vert(appdata_full i)
             {
                 float t = i.texcoord.y;
+                float3 p_0 = mul(unity_WorldToObject, float4(_BezierControlV0, 1.0)).xyz;
+                float3 p_1 = mul(unity_WorldToObject, float4(_BezierControlV1, 1.0)).xyz;
+                float3 p_2 = mul(unity_WorldToObject, float4(_BezierControlV2, 1.0)).xyz;
 
                 // De Casteljau's algorithm
-                float3 a = t * (_BezierControlV1 - _BezierControlV0) + _BezierControlV0;
-                float3 b = t * (_BezierControlV2 - _BezierControlV1) + _BezierControlV1;
+                float3 a = t * (p_1 - p_0) + p_0;
+                float3 b = t * (p_2 - p_1) + p_1;
                 float3 c = t * (b - a) + a;
                 float3 tangent = normalize(b - a);
 
@@ -99,13 +102,14 @@ Shader "Custom/GrassTessellation"
                 
                 float3 c_0 = c - _Dimension.x * binormal;
                 float3 c_1 = c + _Dimension.x * binormal;
+                float3 vert =  c_0 + (c_1 - c_0) * i.texcoord.x;
                 
                 // output
                 TSControlPoint tc;
-                tc.positionWS = mul(unity_ObjectToWorld, c_0 + c_1 * i.texcoord.x).xyz;
+                tc.positionWS = mul(unity_ObjectToWorld, float4(vert, 1.0)).xyz;
                 tc.color = float4(i.texcoord.y, i.texcoord.y, i.texcoord.y, 1);
-                tc.normalWS = UnityObjectToWorldNormal(i.normal);
-                tc.tangentWS = UnityObjectToWorldNormal(i.tangent);
+                tc.normalWS = UnityObjectToWorldNormal(normal);
+                tc.tangentWS = UnityObjectToWorldNormal(tangent);
                 return tc;
             }
 
