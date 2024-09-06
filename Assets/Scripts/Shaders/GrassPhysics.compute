@@ -1,0 +1,24 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Define structures for vertex data
+struct VertexData
+{
+    float3 position;
+    float3 normal;
+    float2 uv;
+};
+
+// Input and output buffers
+StructuredBuffer<VertexData> inputVertices;
+RWStructuredBuffer<VertexData> outputVertices;
+
+[numthreads(64,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // TODO: insert actual code here!
+    VertexData vertex = inputVertices[id.x];
+
+    // Write modified vertex data to output buffer
+    outputVertices[id.x] = vertex;
+}

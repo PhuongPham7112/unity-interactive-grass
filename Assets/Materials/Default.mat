@@ -80,8 +80,11 @@ Material:
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
+    - _BezierControlV0: {r: 0, g: 0, b: 0, a: 1}
+    - _BezierControlV1: {r: 0, g: 0.5, b: 0, a: 1}
+    - _BezierControlV2: {r: 0, g: 1, b: 0, a: 1}
     - _BezierControls: {r: 1, g: 1, b: 1, a: 1}
-    - _Color: {r: 0.006754461, g: 0.5471698, b: 0, a: 1}
+    - _Color: {r: 0.009299249, g: 0.6509434, b: 0, a: 1}
     - _EdgeFactors: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []

@@ -5,7 +5,7 @@ Shader "Custom/GrassTessellation"
     {
         _Color("Grass Color", Color) = (0, 1, 0 ,1)
         _BezierControlV0("Curve Control Point 0", Vector) = (0, 0, 0)
-        _BezierControlV1("Curve Control Point 1", Vector) = (0, 0.5, 0)
+        _BezierControlV1("Curve Control Point 1", Vector) = (0, 1, 0)
         _BezierControlV2("Curve Control Point 2", Vector) = (0, 1, 0)
         _EdgeFactors("Edge Factors", Vector) = (3, 3, 3)
         _InsideFactor("Inside Factor", Float) = 3
