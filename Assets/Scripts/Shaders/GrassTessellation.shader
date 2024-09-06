@@ -5,8 +5,8 @@ Shader "Custom/GrassTessellation"
     {
         _Color("Grass Color", Color) = (0, 1, 0 ,1)
         _BezierControlV0("Curve Control Point 0", Vector) = (0, 0, 0)
-        _BezierControlV1("Curve Control Point 1", Vector) = (0, 1, 0)
-        _BezierControlV2("Curve Control Point 2", Vector) = (0, 1, 0)
+        _BezierControlV1("Curve Control Point 1", Vector) = (0, 0.7, 0)
+        _BezierControlV2("Curve Control Point 2", Vector) = (0, 1, 0.3)
         _EdgeFactors("Edge Factors", Vector) = (3, 3, 3)
         _InsideFactor("Inside Factor", Float) = 3
     }
@@ -40,11 +40,23 @@ Shader "Custom/GrassTessellation"
             
             #define NUM_BEZIER_CONTROL_POINTS 4
 
+            float3 BezierPoints(float3 p0, float3 p1, float3 p2, float t)
+            {
+                float3 p = (1 - t) * (1 - t) * p0 + 2 * (1 - t) * t * p1 + t * t * p2;
+                return p;
+            }
+
+            float3 BezierPointsDeriv(float3 p0, float3 p1, float3 p2, float t)
+            {
+                float3 p = 2 * (1 - t) * (p1 - p0) + 2 * t * (p2 - p1);
+                return p;
+            }
             struct TSControlPoint
             {
                 float3 positionWS: INTERNALTESSPOS;
                 float3 normalWS: NORMAL;
                 float3 tangentWS: TANGENT;
+                float4 color: COLOR;
             };
 
             struct TSFactors
@@ -55,6 +67,7 @@ Shader "Custom/GrassTessellation"
             };
 
             struct TSInterpolators {
+                float4 color: COLOR;
                 float3 normalWS: TEXCOORD0;
                 float3 positionWS: TEXCOORD1;
                 float3 tangentWS: TEXCOORD2;
@@ -69,8 +82,18 @@ Shader "Custom/GrassTessellation"
             // vertex shader
             TSControlPoint vert(appdata_full i)
             {
+                float t = i.texcoord.y;
+                float3 bp = BezierPoints(_BezierControlV0, _BezierControlV1, _BezierControlV2, t);
+                
+                float3 tangent = normalize(BezierPointsDeriv(_BezierControlV0, _BezierControlV1, _BezierControlV2, t));
+                float3 up = float3(0, 1, 0); // TODO
+                float3 normal = normalize(cross(tangent, up));
+                float3 binormal = normalize(cross(normal, tangent));
+                float3 vertexOffset = float3(0, 0, 0);
+                
                 TSControlPoint tc;
                 tc.positionWS = mul(unity_ObjectToWorld, i.vertex).xyz;
+                tc.color = float4(i.texcoord.y, i.texcoord.y, i.texcoord.y, 1);
                 tc.normalWS = UnityObjectToWorldNormal(i.normal);
                 tc.tangentWS = UnityObjectToWorldNormal(i.tangent);
                 return tc;
@@ -122,6 +145,7 @@ Shader "Custom/GrassTessellation"
                 output.normalWS = normalWS; // world space
                 output.positionWS = positionWS; // world space
                 output.tangentWS = BARYCENTRIC_INTERPOLATE(tangentWS); // world space
+                output.color = BARYCENTRIC_INTERPOLATE(color);
                 return output;
             }
 
@@ -179,7 +203,7 @@ Shader "Custom/GrassTessellation"
 
             float4 frag(TSInterpolators tc) : SV_Target
             {
-                return _Color;
+                return _Color * tc.color;
             }
 
             ENDHLSL
