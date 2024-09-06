@@ -17,6 +17,7 @@ Shader "Custom/GrassTessellation"
             #pragma fragment frag
             #pragma hull hull
             #pragma domain domain
+            #pragma geometry geom
             #pragma target 5.0
             #include "UnityCG.cginc"
 
@@ -46,6 +47,10 @@ Shader "Custom/GrassTessellation"
             struct TSInterpolators {
                 float3 normalWS: TEXCOORD0;
                 float3 positionWS: TEXCOORD1;
+                float4 positionCS: SV_POSITION;
+            };
+
+            struct GSOutput {
                 float4 positionCS: SV_POSITION;
             };
 
@@ -104,11 +109,24 @@ Shader "Custom/GrassTessellation"
                 return output;
             }
 
-
-            float4 frag(TSControlPoint tc) : SV_Target
+            [maxvertexcount(3)]
+            void geom(triangle TSInterpolators IN[3], inout TriangleStream<GSOutput> triStream)
             {
-                float strength = saturate(dot(tc.normalWS, float3(0, 1, 0)));
-                return strength * float4(0, 1, 0, 1);
+                GSOutput o;
+
+                o.positionCS = IN[0].positionCS;
+                triStream.Append(o);
+
+                o.positionCS = IN[1].positionCS;
+                triStream.Append(o);
+
+                o.positionCS = IN[2].positionCS;
+                triStream.Append(o);
+            }
+
+            float4 frag(GSOutput tc) : SV_Target
+            {
+                return 1.0 * float4(0, 1, 0, 1);
             }
 
             ENDHLSL
