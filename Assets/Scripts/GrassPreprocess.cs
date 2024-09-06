@@ -75,6 +75,8 @@ public class GrassPreprocess : EditorWindow
 
             GameObject spawnedObject = PrefabUtility.InstantiatePrefab(prefabToSpawn) as GameObject;
             spawnedObject.transform.rotation = Quaternion.FromToRotation(spawnedObject.transform.up, worldNormal);
+            int randomAngle = Random.Range(1, 131);
+            spawnedObject.transform.rotation *= Quaternion.Euler(0, randomAngle, 0);
             spawnedObject.transform.position = worldPos + worldNormal * heightOffset;
             spawnedObject.transform.SetParent(selectedObject.transform);
             spawnedObjects.Add(spawnedObject);
