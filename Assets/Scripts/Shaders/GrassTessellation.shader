@@ -85,14 +85,16 @@ Shader "Custom/GrassTessellation"
                 float t = i.texcoord.y;
                 float3 bp = BezierPoints(_BezierControlV0, _BezierControlV1, _BezierControlV2, t);
                 
+                // find coordinate system
                 float3 tangent = normalize(BezierPointsDeriv(_BezierControlV0, _BezierControlV1, _BezierControlV2, t));
                 float3 up = float3(0, 1, 0); // TODO
                 float3 normal = normalize(cross(tangent, up));
                 float3 binormal = normalize(cross(normal, tangent));
-                float3 vertexOffset = float3(0, 0, 0);
+                float3 vertexOffset = i.vertex.x * binormal + i.vertex.y * normal + i.vertex.z * tangent;
                 
+                // output
                 TSControlPoint tc;
-                tc.positionWS = mul(unity_ObjectToWorld, i.vertex).xyz;
+                tc.positionWS = mul(unity_ObjectToWorld, i.vertex + float4(0, 0, 0, 0)).xyz;
                 tc.color = float4(i.texcoord.y, i.texcoord.y, i.texcoord.y, 1);
                 tc.normalWS = UnityObjectToWorldNormal(i.normal);
                 tc.tangentWS = UnityObjectToWorldNormal(i.tangent);
