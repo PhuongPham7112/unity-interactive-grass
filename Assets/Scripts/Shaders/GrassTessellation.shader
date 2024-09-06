@@ -35,6 +35,7 @@ Shader "Custom/GrassTessellation"
             {
                 float3 positionWS: INTERNALTESSPOS;
                 float3 normalWS: NORMAL;
+                float3 tangentWS: TANGENT;
             };
 
             struct TSFactors
@@ -47,6 +48,7 @@ Shader "Custom/GrassTessellation"
             struct TSInterpolators {
                 float3 normalWS: TEXCOORD0;
                 float3 positionWS: TEXCOORD1;
+                float3 tangentWS: TEXCOORD2;
                 float4 positionCS: SV_POSITION;
             };
 
@@ -60,6 +62,7 @@ Shader "Custom/GrassTessellation"
                 TSControlPoint tc;
                 tc.positionWS = mul(unity_ObjectToWorld, i.vertex).xyz;
                 tc.normalWS = UnityObjectToWorldNormal(i.normal);
+                tc.tangentWS = UnityObjectToWorldNormal(i.tangent);
                 return tc;
             }
 
@@ -106,14 +109,39 @@ Shader "Custom/GrassTessellation"
                 output.positionCS = mul(UNITY_MATRIX_VP, float4(positionWS.xyz, 1.0)); // clip space
                 output.normalWS = normalWS; // world space
                 output.positionWS = positionWS; // world space
+                output.tangentWS = BARYCENTRIC_INTERPOLATE(tangentWS); // world space
                 return output;
             }
 
-            [maxvertexcount(3)]
+            [maxvertexcount(200)]
             void geom(triangle TSInterpolators IN[3], inout TriangleStream<GSOutput> triStream)
             {
                 GSOutput o;
+                float3 offset;
 
+                // newly generated geo
+                for (int i = 0; i < 3; i++)
+                {
+                    if (i == 0)
+                    {
+                        offset = float3(0.1, 0, 0);
+                    }
+                    else if (i == 1)
+                    {
+                        offset = float3(-0.1, 0, 0);
+                    }
+                    else if (i == 2)
+                    {
+                        offset = float3(0, 0.2, 0);
+                    }
+                    float3 positionOS = mul(unity_WorldToObject, float4(IN[0].positionWS, 1.0)).xyz;
+
+                    o.positionCS = UnityObjectToClipPos(positionOS + offset);
+                    triStream.Append(o);
+                }
+                triStream.RestartStrip();
+
+                // already have geo
                 o.positionCS = IN[0].positionCS;
                 triStream.Append(o);
 
@@ -122,6 +150,8 @@ Shader "Custom/GrassTessellation"
 
                 o.positionCS = IN[2].positionCS;
                 triStream.Append(o);
+
+                triStream.RestartStrip();
             }
 
             float4 frag(GSOutput tc) : SV_Target
