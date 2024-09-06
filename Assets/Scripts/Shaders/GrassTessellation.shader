@@ -85,29 +85,34 @@ Shader "Custom/GrassTessellation"
             // vertex shader
             TSControlPoint vert(appdata_full i)
             {
-                float t = i.texcoord.y;
+                float u = i.texcoord.x;
+                float v = i.texcoord.y;
+
+                // control points
                 float3 p_0 = mul(unity_WorldToObject, float4(_BezierControlV0, 1.0)).xyz;
                 float3 p_1 = mul(unity_WorldToObject, float4(_BezierControlV1, 1.0)).xyz;
                 float3 p_2 = mul(unity_WorldToObject, float4(_BezierControlV2, 1.0)).xyz;
 
                 // De Casteljau's algorithm
-                float3 a = t * (p_1 - p_0) + p_0;
-                float3 b = t * (p_2 - p_1) + p_1;
-                float3 c = t * (b - a) + a;
-                float3 tangent = normalize(b - a);
+                float3 a = v * (p_1 - p_0) + p_0;
+                float3 b = v * (p_2 - p_1) + p_1;
+                float3 c = v * (b - a) + a;
 
+                // coordinate systems
+                float3 tangent = normalize(b - a);
                 float3 up = float3(0, 1, 0);
                 float3 binormal = normalize(cross(tangent, up));
                 float3 normal = normalize(cross(binormal, tangent)); // should be provided
                 
+                // final vertex position
                 float3 c_0 = c - _Dimension.x * binormal;
                 float3 c_1 = c + _Dimension.x * binormal;
-                float3 vert =  c_0 + (c_1 - c_0) * i.texcoord.x;
+                float3 vert =  c_0 + (c_1 - c_0) * u;
                 
                 // output
                 TSControlPoint tc;
                 tc.positionWS = mul(unity_ObjectToWorld, float4(vert, 1.0)).xyz;
-                tc.color = float4(i.texcoord.y, i.texcoord.y, i.texcoord.y, 1);
+                tc.color = float4(v, v, v, 1);
                 tc.normalWS = UnityObjectToWorldNormal(normal);
                 tc.tangentWS = UnityObjectToWorldNormal(tangent);
                 return tc;
