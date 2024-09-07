@@ -89,9 +89,9 @@ Shader "Custom/GrassTessellation"
                 float v = i.texcoord.y;
 
                 // control points
-                float3 p_0 = mul(unity_WorldToObject, float4(_BezierControlV0, 1.0)).xyz;
-                float3 p_1 = mul(unity_WorldToObject, float4(_BezierControlV1, 1.0)).xyz;
-                float3 p_2 = mul(unity_WorldToObject, float4(_BezierControlV2, 1.0)).xyz;
+                float3 p_0 = mul(float4(_BezierControlV0, 1.0), unity_WorldToObject).xyz;
+                float3 p_1 = mul(float4(_BezierControlV1, 1.0), unity_WorldToObject).xyz;
+                float3 p_2 = mul(float4(_BezierControlV2, 1.0), unity_WorldToObject).xyz;
 
                 // De Casteljau's algorithm
                 float3 a = v * (p_1 - p_0) + p_0;
