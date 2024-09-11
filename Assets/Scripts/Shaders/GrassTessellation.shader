@@ -42,18 +42,6 @@ Shader "Custom/GrassTessellation"
             
             #define NUM_BEZIER_CONTROL_POINTS 4
 
-            float3 BezierPoints(float3 p0, float3 p1, float3 p2, float t)
-            {
-                float3 p = (1 - t) * (1 - t) * p0 + 2 * (1 - t) * t * p1 + t * t * p2;
-                return p;
-            }
-
-            float3 BezierPointsDeriv(float3 p0, float3 p1, float3 p2, float t)
-            {
-                float3 p = 2 * (1 - t) * (p1 - p0) + 2 * t * (p2 - p1);
-                return p;
-            }
-
             struct TSControlPoint
             {
                 float3 positionWS: INTERNALTESSPOS;
@@ -89,6 +77,7 @@ Shader "Custom/GrassTessellation"
                 float v = i.texcoord.y;
 
                 // control points
+                _BezierControlV2.y = _Dimension.y;
                 float3 p_0 = mul(float4(_BezierControlV0, 1.0), unity_WorldToObject).xyz;
                 float3 p_1 = mul(float4(_BezierControlV1, 1.0), unity_WorldToObject).xyz;
                 float3 p_2 = mul(float4(_BezierControlV2, 1.0), unity_WorldToObject).xyz;

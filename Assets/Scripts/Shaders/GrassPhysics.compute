@@ -1,24 +1,19 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
 
-// Define structures for vertex data
-struct VertexData
-{
-    float3 position;
-    float3 normal;
-    float2 uv;
-};
-
 // Input and output buffers
-StructuredBuffer<VertexData> inputVertices;
-RWStructuredBuffer<VertexData> outputVertices;
+float time;
+float4x4 objectToWorldMatrix;
+RWStructuredBuffer<float3> v2Positions;
+
+// https://steve.hollasch.net/cgindex/curves/cbezarclen.html
 
 [numthreads(64,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     // TODO: insert actual code here!
-    VertexData vertex = inputVertices[id.x];
+    float3 worldPos = mul(objectToWorldMatrix, float4(v2Positions[id.x], 1.0)).xyz;
 
-    // Write modified vertex data to output buffer
-    outputVertices[id.x] = vertex;
+    // Write modified data to output buffer
+    v2Positions[id.x] = sin(worldPos.x * 0.1 + time) * 0.5;;
 }
