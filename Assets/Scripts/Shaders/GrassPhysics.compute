@@ -12,8 +12,9 @@ RWStructuredBuffer<float3> v2Positions;
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     // TODO: insert actual code here!
+    float3 vertex = v2Positions[id.x];
     float3 worldPos = mul(objectToWorldMatrix, float4(v2Positions[id.x], 1.0)).xyz;
-
+    vertex.y += sin(worldPos.x * 0.001 + time) * 0.005;
     // Write modified data to output buffer
-    v2Positions[id.x] = sin(worldPos.x * 0.1 + time) * 0.5;;
+    v2Positions[id.x] = vertex;
 }

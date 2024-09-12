@@ -5,7 +5,7 @@ Shader "Custom/GrassTessellation"
     {
         _Color("Grass Color", Color) = (0, 1, 0 ,1)
         _BezierControlV0("Curve Control Point 0", Vector) = (0, 0, 0)
-        _BezierControlV1("Curve Control Point 1", Vector) = (0, 0.7, 0)
+        _BezierControlV1("Curve Control Point 1", Vector) = (0, 0.1, 0)
         _BezierControlV2("Curve Control Point 2", Vector) = (0, 1, 0.3)
         _Dimension("Grass Width & Height", Vector) = (0.1, 0.5, 0)
         _EdgeFactors("Edge Factors", Vector) = (3, 3, 3)
@@ -27,6 +27,7 @@ Shader "Custom/GrassTessellation"
             #pragma target 5.0
             #include "UnityCG.cginc"
 
+            int _Index;
             float3 _BezierControlV0;
             float3 _BezierControlV1;
             float3 _BezierControlV2;
@@ -34,6 +35,7 @@ Shader "Custom/GrassTessellation"
             float4 _Color;
             float _InsideFactor;
             float2 _Dimension;
+            StructuredBuffer<float3> _V2Buffer;
 
             #define BARYCENTRIC_INTERPOLATE(fieldName) \
                     patch[0].fieldName * barycentricCoordinates.x + \
@@ -78,9 +80,9 @@ Shader "Custom/GrassTessellation"
 
                 // control points
                 _BezierControlV2.y = _Dimension.y;
-                float3 p_0 = mul(float4(_BezierControlV0, 1.0), unity_WorldToObject).xyz;
+                float3 p_0 = mul(float4(0.0, 0.0, 0.0, 1.0), unity_WorldToObject).xyz;
                 float3 p_1 = mul(float4(_BezierControlV1, 1.0), unity_WorldToObject).xyz;
-                float3 p_2 = mul(float4(_BezierControlV2, 1.0), unity_WorldToObject).xyz;
+                float3 p_2 = mul(float4(_V2Buffer[_Index], 1.0), unity_WorldToObject).xyz;
 
                 // De Casteljau's algorithm
                 float3 a = v * (p_1 - p_0) + p_0;

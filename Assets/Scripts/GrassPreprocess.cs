@@ -13,7 +13,7 @@ public class GrassPreprocess : EditorWindow
     private GameObject prefabToSpawn;
     private List<GameObject> spawnedObjects = new List<GameObject>();
 
-    [MenuItem("Tools/Vertex Prefab Spawner")]
+    [MenuItem("Tools/Grass Preprocessor Spawner")]
     public static void ShowWindow()
     {
         GetWindow<GrassPreprocess>("Grass Preprocess Spawner");
@@ -30,12 +30,12 @@ public class GrassPreprocess : EditorWindow
         grassWidth = EditorGUILayout.FloatField("Width of grass", grassWidth);
         grassStiffness = EditorGUILayout.FloatField("Stiffness of grass", grassStiffness);
 
-        if (GUILayout.Button("Spawn Prefabs"))
+        if (GUILayout.Button("Spawn Grass Prefabs"))
         {
             SpawnPrefabsAtVertices();
         }
 
-        if (GUILayout.Button("Clear Spawned Prefabs"))
+        if (GUILayout.Button("Clear Spawned Grass Prefabs"))
         {
             ClearSpawnedPrefabs();
         }
@@ -82,7 +82,7 @@ public class GrassPreprocess : EditorWindow
             spawnedObjects.Add(spawnedObject);
         }
 
-        Debug.Log($"Spawned {vertices.Length} prefabs at vertices.");
+        Debug.Log($"Spawned {vertices.Length} grass prefabs at vertices.");
     }
 
     private void ClearSpawnedPrefabs()
