@@ -4,17 +4,16 @@
 // Input and output buffers
 float time;
 float4x4 objectToWorldMatrix;
-RWStructuredBuffer<float3> v2Positions;
+RWStructuredBuffer<float4> v1Positions;
+RWStructuredBuffer<float4> v2Positions;
 
 // https://steve.hollasch.net/cgindex/curves/cbezarclen.html
 
 [numthreads(64,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    // TODO: insert actual code here!
-    float3 vertex = v2Positions[id.x];
-    float3 worldPos = mul(objectToWorldMatrix, float4(v2Positions[id.x], 1.0)).xyz;
-    vertex.y += sin(worldPos.x * 0.001 + time) * 0.005;
+    float4 vertex = v2Positions[id.x];
+    vertex.x += sin(vertex.y * 0.001 + time) * 0.0005;
     // Write modified data to output buffer
     v2Positions[id.x] = vertex;
 }

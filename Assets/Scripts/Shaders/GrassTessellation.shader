@@ -35,7 +35,8 @@ Shader "Custom/GrassTessellation"
             float4 _Color;
             float _InsideFactor;
             float2 _Dimension;
-            StructuredBuffer<float3> _V2Buffer;
+            StructuredBuffer<float4> _V1Buffer;
+            StructuredBuffer<float4> _V2Buffer;
 
             #define BARYCENTRIC_INTERPOLATE(fieldName) \
                     patch[0].fieldName * barycentricCoordinates.x + \
@@ -79,10 +80,9 @@ Shader "Custom/GrassTessellation"
                 float v = i.texcoord.y;
 
                 // control points
-                _BezierControlV2.y = _Dimension.y;
                 float3 p_0 = mul(float4(0.0, 0.0, 0.0, 1.0), unity_WorldToObject).xyz;
                 float3 p_1 = mul(float4(_BezierControlV1, 1.0), unity_WorldToObject).xyz;
-                float3 p_2 = mul(float4(_V2Buffer[_Index], 1.0), unity_WorldToObject).xyz;
+                float3 p_2 = mul(float4(_V2Buffer[_Index].xyz, 1.0), unity_WorldToObject).xyz;
 
                 // De Casteljau's algorithm
                 float3 a = v * (p_1 - p_0) + p_0;

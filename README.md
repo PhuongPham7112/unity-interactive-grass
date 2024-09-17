@@ -9,4 +9,4 @@ Each grass blade is controlled by their material. The physics compute shader (PC
 Once the computation is finished. Hand off the results to the shader pipeline to render the grass.
 
 ## TODOs
-[]-How do I get the compute shader value to the vertex shader material?
+[ ] - How do I get the compute shader value to the vertex shader material?
