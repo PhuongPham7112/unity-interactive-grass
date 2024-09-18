@@ -3,8 +3,12 @@
 
 // Input and output buffers
 float time;
+float deltaTime;
+float collisionStrength;
+float stiffnessCoefficient;
 float4x4 objectToWorldMatrix;
 RWStructuredBuffer<float> grassLength;
+RWStructuredBuffer<float3> grassUp;
 RWStructuredBuffer<float4> v1Positions;
 RWStructuredBuffer<float4> v2Positions;
 
@@ -14,7 +18,7 @@ float B(float2 v0, float2 v1, float2 v2, float t)
     return sqrt(d.x * d.x + d.y * d.y);
 }
 
-// using legendre-gauss solution
+// using legendre-gauss solution: https://pomax.github.io/bezierinfo/#arclength
 float BezierCurveArcLength(float2 v0, float2 v1, float2 v2)
 {
     float length = 0;
@@ -34,24 +38,28 @@ float BezierCurveArcLength(float2 v0, float2 v1, float2 v2)
 [numthreads(64,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    // random v2 movement
+    float3 up = float3(0, 1, 0);
+    float3 vertex0 = float3(0, 0, 0);
     float4 vertex1 = v1Positions[id.x];
     float4 vertex2 = v2Positions[id.x];
+    float originalLength = v1Positions[id.x].w;
+
+    // sine v2 movement
     vertex2.x += sin(vertex2.y * 0.001 + time) * 0.0005;
 
     // calculate v1 position based on v2
-
+    float3 v1_dir = normalize(vertex1.xyz);
+    vertex1.xyz = dot(vertex2.xyz, v1_dir) * 0.5f * v1_dir;
 
     // calculate length
-    float originalLength = v1Positions[id.x].w;
     grassLength[id.x] = BezierCurveArcLength(float2(0, 0), v1Positions[id.x].xy, v2Positions[id.x].xy);
     float lengthDiff = originalLength / grassLength[id.x];
 
-    // adjust length
-    //float3 v01 = lengthDiff * vertex1.xyz;
-    //float3 v12 = lengthDiff * (vertex2.xyz - vertex1.xyz);
-    //vertex1.xyz = v01;
-    //vertex2.xyz = v12;
+    // correct new length
+    float3 v01 = lengthDiff * (vertex1.xyz - vertex0);
+    float3 v12 = lengthDiff * (vertex2.xyz - vertex1.xyz);
+    vertex1.xyz = v01;
+    vertex2.xyz = vertex1.xyz + v12;
 
     // output
     v1Positions[id.x] = vertex1;

@@ -7,12 +7,17 @@ public class GrassModel : MonoBehaviour
     private int kernelIndex;
     private Vector4[] grassV1Positions; // v1 xyz + grass height
     private Vector4[] grassV2Positions; // v2 xyz + grass width
+    private ComputeBuffer grassUpBuffer;
     private ComputeBuffer grass1PosBuffer;
     private ComputeBuffer grass2PosBuffer;
     private ComputeBuffer grassLength;
     private MaterialPropertyBlock propertyBlock;
+    
     [SerializeField] private ComputeShader grassPhysicsCS;
     [SerializeField] private Material grassMaterial;
+    [SerializeField] public float decreaseAmount = 0.5f;
+    [SerializeField] public float stiffnessCoefficient = 0.5f;
+    [SerializeField] public float collisionStrength = 0.5f;
     [SerializeField] public float grassWidth = 1.0f;
     [SerializeField] public float grassHeight = 1.0f;
     [SerializeField] private int numPoints;
@@ -53,11 +58,13 @@ public class GrassModel : MonoBehaviour
     void Update()
     {
         // Run the compute shader
+        grassPhysicsCS.SetFloat("deltaTime", Time.deltaTime);
         grassPhysicsCS.SetFloat("time", Time.time);
         grassPhysicsCS.SetMatrix("objectToWorldMatrix", transform.localToWorldMatrix);
         grassPhysicsCS.Dispatch(kernelIndex, numPoints / 8, 1, 1);
 
         // Set unique properties per object
+        grassMaterial.SetBuffer("_V1Buffer", grass1PosBuffer);
         grassMaterial.SetBuffer("_V2Buffer", grass2PosBuffer);
         for (int i = 0; i < numPoints; i++)
         {
@@ -88,6 +95,7 @@ public class GrassModel : MonoBehaviour
     void OnDestroy()
     {
         grassLength?.Release();
+        grassUpBuffer?.Release();
         grass1PosBuffer?.Release();
         grass2PosBuffer?.Release();
     }
