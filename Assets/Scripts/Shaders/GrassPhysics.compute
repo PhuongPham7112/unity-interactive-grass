@@ -4,16 +4,56 @@
 // Input and output buffers
 float time;
 float4x4 objectToWorldMatrix;
+RWStructuredBuffer<float> grassLength;
 RWStructuredBuffer<float4> v1Positions;
 RWStructuredBuffer<float4> v2Positions;
 
-// https://steve.hollasch.net/cgindex/curves/cbezarclen.html
+float B(float2 v0, float2 v1, float2 v2, float t)
+{
+    float2 d = 2 * (1 - t) * (v1 - v0) + 2 * t * (v2 - v1);
+    return sqrt(d.x * d.x + d.y * d.y);
+}
+
+// using legendre-gauss solution
+float BezierCurveArcLength(float2 v0, float2 v1, float2 v2)
+{
+    float length = 0;
+    int n = 3;
+    float w[3] = { 0.8888888888888888f, 0.5555555555555556f, 0.5555555555555556f };
+    float x[3] = { 0.0f, -0.7745966692414834f, 0.7745966692414834f };
+    
+    float t;
+    for (int i = 0; i < n; i++)
+    {
+        t = 0.5f * x[i] + 0.5f;
+        length += w[i] * B(v0, v1, v2, t);
+    }
+    return 0.5f * length;
+}
 
 [numthreads(64,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    float4 vertex = v2Positions[id.x];
-    vertex.x += sin(vertex.y * 0.001 + time) * 0.0005;
-    // Write modified data to output buffer
-    v2Positions[id.x] = vertex;
+    // random v2 movement
+    float4 vertex1 = v1Positions[id.x];
+    float4 vertex2 = v2Positions[id.x];
+    vertex2.x += sin(vertex2.y * 0.001 + time) * 0.0005;
+
+    // calculate v1 position based on v2
+
+
+    // calculate length
+    float originalLength = v1Positions[id.x].w;
+    grassLength[id.x] = BezierCurveArcLength(float2(0, 0), v1Positions[id.x].xy, v2Positions[id.x].xy);
+    float lengthDiff = originalLength / grassLength[id.x];
+
+    // adjust length
+    //float3 v01 = lengthDiff * vertex1.xyz;
+    //float3 v12 = lengthDiff * (vertex2.xyz - vertex1.xyz);
+    //vertex1.xyz = v01;
+    //vertex2.xyz = v12;
+
+    // output
+    v1Positions[id.x] = vertex1;
+    v2Positions[id.x] = vertex2;
 }
