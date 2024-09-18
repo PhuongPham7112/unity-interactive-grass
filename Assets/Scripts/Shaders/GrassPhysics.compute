@@ -1,12 +1,22 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
 
-// Input and output buffers
+// time updated var
 float time;
 float deltaTime;
+float4x4 objectToWorldMatrix;
+
+// user-provided physical model params
+float grassMass;
 float collisionStrength;
 float stiffnessCoefficient;
-float4x4 objectToWorldMatrix;
+
+// gravity
+float gravityParam;
+float4 gravityPoint;
+float4 gravityDirection;
+
+// buffers
 RWStructuredBuffer<float> grassLength;
 RWStructuredBuffer<float3> grassUp;
 RWStructuredBuffer<float4> v1Positions;
@@ -23,6 +33,7 @@ float BezierCurveArcLength(float2 v0, float2 v1, float2 v2)
 {
     float length = 0;
     int n = 3;
+    // value tables: https://pomax.github.io/bezierinfo/legendre-gauss.html#n3
     float w[3] = { 0.8888888888888888f, 0.5555555555555556f, 0.5555555555555556f };
     float x[3] = { 0.0f, -0.7745966692414834f, 0.7745966692414834f };
     
@@ -44,7 +55,15 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     float4 vertex2 = v2Positions[id.x];
     float originalLength = v1Positions[id.x].w;
 
-    // sine v2 movement
+    // gravity force
+    float m = 1.0f;
+
+    float3 g_e = m * (normalize(gravityDirection.xyz) * gravityDirection.w * (1 - gravityParam) 
+                    + normalize(gravityPoint.xyz - vertex2.xyz) * gravityPoint.w * gravityParam); // environmental gravity
+    float3 g_f = 0.25f * length(g_e); // front gravity
+    float3 g = g_e + g_f;
+
+    // v2 translation
     vertex2.x += sin(vertex2.y * 0.001 + time) * 0.0005;
 
     // calculate v1 position based on v2
