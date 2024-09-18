@@ -58,10 +58,10 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     // gravity force
     float m = 1.0f;
 
-    float3 g_e = m * (normalize(gravityDirection.xyz) * gravityDirection.w * (1 - gravityParam) 
+    float3 g_e = (normalize(gravityDirection.xyz) * gravityDirection.w * (1 - gravityParam) 
                     + normalize(gravityPoint.xyz - vertex2.xyz) * gravityPoint.w * gravityParam); // environmental gravity
-    float3 g_f = 0.25f * length(g_e); // front gravity
-    float3 g = g_e + g_f;
+    float3 g_f = 0.0f; // front gravity
+    float3 g = g_e * originalLength * deltaTime;
 
     // v2 translation
     vertex2.x += sin(vertex2.y * 0.001 + time) * 0.0005;

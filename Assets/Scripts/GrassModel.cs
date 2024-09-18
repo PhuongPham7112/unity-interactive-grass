@@ -28,7 +28,6 @@ public class GrassModel : MonoBehaviour
     {
         propertyBlock = new MaterialPropertyBlock();
         kernelIndex = grassPhysicsCS.FindKernel("CSMain");
-        Debug.Log(kernelIndex);
 
         // Get number of child objects
         numPoints = gameObject.transform.childCount;
@@ -53,6 +52,11 @@ public class GrassModel : MonoBehaviour
         grassPhysicsCS.SetBuffer(kernelIndex, "grassLength", grassLength);
         grassPhysicsCS.SetBuffer(kernelIndex, "v1Positions", grass1PosBuffer);
         grassPhysicsCS.SetBuffer(kernelIndex, "v2Positions", grass2PosBuffer);
+
+        // Setup properties
+        grassPhysicsCS.SetFloat("gravityParam", 0.0f);
+        grassPhysicsCS.SetVector("gravityDirection", new Vector4(0, 1, 0, 9.8f));
+        grassPhysicsCS.SetVector("gravityPoint", new Vector4(0, 0, 0, 9.8f));
     }
 
     // Update is called once per frame
