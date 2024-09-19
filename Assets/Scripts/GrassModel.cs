@@ -13,11 +13,12 @@ public class GrassModel : MonoBehaviour
     private ComputeBuffer grassLength;
     private MaterialPropertyBlock propertyBlock;
     
+    [SerializeField] public SphereCollider[] colliders;
     [SerializeField] private ComputeShader grassPhysicsCS;
     [SerializeField] private Material grassMaterial;
     [SerializeField] public float decreaseAmount = 0.5f;
-    [SerializeField] public float stiffnessCoefficient = 0.5f;
-    [SerializeField] public float collisionStrength = 0.5f;
+    [SerializeField] public float stiffnessCoefficient = 0.1f;
+    [SerializeField] public float collisionStrength = 0.2f;
     [SerializeField] public float grassMass = 1.0f;
     [SerializeField] public float grassWidth = 1.0f;
     [SerializeField] public float grassHeight = 1.0f;
@@ -54,6 +55,8 @@ public class GrassModel : MonoBehaviour
         grassPhysicsCS.SetBuffer(kernelIndex, "v2Positions", grass2PosBuffer);
 
         // Setup properties
+        grassPhysicsCS.SetFloat("collisionStrength", collisionStrength);
+        grassPhysicsCS.SetFloat("stiffnessCoefficient", stiffnessCoefficient);
         grassPhysicsCS.SetFloat("gravityParam", 0.0f);
         grassPhysicsCS.SetVector("gravityDirection", new Vector4(0, 1, 0, 9.8f));
         grassPhysicsCS.SetVector("gravityPoint", new Vector4(0, 0, 0, 9.8f));

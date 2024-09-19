@@ -51,36 +51,43 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 {
     float3 up = float3(0, 1, 0);
     float3 vertex0 = float3(0, 0, 0);
-    float4 vertex1 = v1Positions[id.x];
-    float4 vertex2 = v2Positions[id.x];
+    float3 vertex1 = v1Positions[id.x].xyz;
+    float3 vertex2 = v2Positions[id.x].xyz;
     float originalLength = v1Positions[id.x].w;
+    float originalWidth = v2Positions[id.x].w;
 
     // gravity force
     float m = 1.0f;
-
     float3 g_e = (normalize(gravityDirection.xyz) * gravityDirection.w * (1 - gravityParam) 
-                    + normalize(gravityPoint.xyz - vertex2.xyz) * gravityPoint.w * gravityParam); // environmental gravity
+                    + normalize(gravityPoint.xyz - vertex2) * gravityPoint.w * gravityParam); // environmental gravity
     float3 g_f = 0.0f; // front gravity
     float3 g = g_e * originalLength * deltaTime;
 
+    // stiffness force: the counterforce to previously applied forces
+    float3 idleV2 = float3(0, originalLength, 0);
+    float3 s = (idleV2 - vertex2) * stiffnessCoefficient * max(1 - collisionStrength, 0.1f);
+
+    // wind force: computed by using analytic functions
+
     // v2 translation
     vertex2.x += sin(vertex2.y * 0.001 + time) * 0.0005;
+    vertex2 += s;
 
     // calculate v1 position based on v2
     float3 v1_dir = normalize(vertex1.xyz);
-    vertex1.xyz = dot(vertex2.xyz, v1_dir) * 0.5f * v1_dir;
+    vertex1.xyz = dot(vertex2, v1_dir) * 0.5f * v1_dir;
 
     // calculate length
     grassLength[id.x] = BezierCurveArcLength(float2(0, 0), v1Positions[id.x].xy, v2Positions[id.x].xy);
     float lengthDiff = originalLength / grassLength[id.x];
 
     // correct new length
-    float3 v01 = lengthDiff * (vertex1.xyz - vertex0);
-    float3 v12 = lengthDiff * (vertex2.xyz - vertex1.xyz);
-    vertex1.xyz = v01;
-    vertex2.xyz = vertex1.xyz + v12;
+    float3 v01 = lengthDiff * (vertex1 - vertex0);
+    float3 v12 = lengthDiff * (vertex2 - vertex1);
+    vertex1 = v01;
+    vertex2 = vertex1.xyz + v12;
 
     // output
-    v1Positions[id.x] = vertex1;
-    v2Positions[id.x] = vertex2;
+    v1Positions[id.x] = float4(vertex1, originalLength);
+    v2Positions[id.x] = float4(vertex2, originalWidth);
 }
