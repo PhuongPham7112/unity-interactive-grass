@@ -7,7 +7,8 @@ public class GrassModel : MonoBehaviour
     private int kernelIndex;
     private Vector4[] grassV1Positions; // v1 xyz + grass height
     private Vector4[] grassV2Positions; // v2 xyz + grass width
-    private ComputeBuffer grassUpBuffer;
+    private Vector3[] grassGroundPositions; // v2 xyz + grass width
+    private ComputeBuffer groundPosBuffer;
     private ComputeBuffer grass1PosBuffer;
     private ComputeBuffer grass2PosBuffer;
     private ComputeBuffer grassLength;
@@ -34,25 +35,30 @@ public class GrassModel : MonoBehaviour
         numPoints = gameObject.transform.childCount;
 
         // Fill the buffer with the v2 positions of the child objects
+        grassGroundPositions = new Vector3[numPoints];
         grassV1Positions = new Vector4[numPoints];
         grassV2Positions = new Vector4[numPoints];
         for (int i = 0; i < numPoints; i++)
         {
+            grassGroundPositions[i] = gameObject.transform.GetChild(i).position;
             grassV1Positions[i] = new Vector4(0, grassHeight * 0.5f, Mathf.Epsilon, grassHeight);
             grassV2Positions[i] = new Vector4(0, grassHeight, Mathf.Epsilon, grassWidth);
         }
 
-        // Setup buffer
+        // Setup buffers
+        groundPosBuffer = new ComputeBuffer(numPoints, sizeof(float) * 3);
         grassLength = new ComputeBuffer(numPoints, sizeof(float));
         grass1PosBuffer = new ComputeBuffer(numPoints, sizeof(float) * 4);
         grass2PosBuffer = new ComputeBuffer(numPoints, sizeof(float) * 4);
 
+        groundPosBuffer.SetData(grassGroundPositions);
         grass1PosBuffer.SetData(grassV1Positions);
         grass2PosBuffer.SetData(grassV2Positions);
 
         grassPhysicsCS.SetBuffer(kernelIndex, "grassLength", grassLength);
         grassPhysicsCS.SetBuffer(kernelIndex, "v1Positions", grass1PosBuffer);
         grassPhysicsCS.SetBuffer(kernelIndex, "v2Positions", grass2PosBuffer);
+        grassPhysicsCS.SetBuffer(kernelIndex, "groundPositions", groundPosBuffer);
 
         // Setup properties
         grassPhysicsCS.SetFloat("collisionStrength", collisionStrength);
@@ -86,24 +92,24 @@ public class GrassModel : MonoBehaviour
         }
 
         // check
-        UnityEngine.Rendering.AsyncGPUReadback.Request(grassLength, request =>
-        {
-            if (request.hasError)
-            {
-                Debug.Log("GPU readback error detected.");
-                return;
-            }
-            float result = request.GetData<float>()[0];
-            // Use the result here
-            Debug.Log(result);
-        });
+        //UnityEngine.Rendering.AsyncGPUReadback.Request(grassLength, request =>
+        //{
+        //    if (request.hasError)
+        //    {
+        //        Debug.Log("GPU readback error detected.");
+        //        return;
+        //    }
+        //    float result = request.GetData<float>()[0];
+        //    // Use the result here
+        //    Debug.Log(result);
+        //});
 
     }
 
     void OnDestroy()
     {
         grassLength?.Release();
-        grassUpBuffer?.Release();
+        groundPosBuffer?.Release();
         grass1PosBuffer?.Release();
         grass2PosBuffer?.Release();
     }
