@@ -72,7 +72,7 @@ float3 WindFunction(float3 pos)
 
 float3 WindForce(float3 groundPos, float3 v0, float3 v2, float3 up, float h)
 {
-    float directAlignment = 1 - abs(dot(normalize(WindFunction(groundPos)), normalize(v2 - v0)));
+    float directAlignment = 1.0f - abs(dot(normalize(WindFunction(groundPos)), normalize(v2 - v0)));
     float heightRatio = dot((v2 - v0), up) / h;
     float alignmentValue = directAlignment * heightRatio;
     return WindFunction(groundPos) * alignmentValue;
@@ -89,29 +89,33 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     float originalWidth = v2Positions[id.x].w;
 
     // gravity force
-    float m = 1.0f;
-    float3 g_e = (normalize(gravityDirection.xyz) * gravityDirection.w * (1 - gravityParam) 
+    float m = 0.1f;
+    float3 g_e = m * (gravityDirection.xyz * gravityDirection.w * (1 - gravityParam) 
                     + normalize(gravityPoint.xyz - vertex2) * gravityPoint.w * gravityParam); // environmental gravity
-    float3 g_f = 0.0f; // front gravity
-    float3 g = g_e * originalLength * deltaTime;
+    /*
+    simulates the elasticity of a blade of grass, which causes the tip of the grass being
+    bent by the influence of the gravity
+    */
+    float3 g_f = 0.25f * length(g_e) * float3(0, 0, 1); // front gravity
+    float3 g = (g_f + g_e) * deltaTime;
 
+    
+    // wind force: computed by using analytic functions
+    float3 w = WindForce(groundPositions[id.x], vertex0, vertex2, up, originalLength) * deltaTime;
+    
     // stiffness force: the counterforce to previously applied forces
     float3 idleV2 = float3(0, originalLength, 0);
     float3 s = (idleV2 - vertex2) * stiffnessCoefficient * max(1 - collisionStrength, 0.1f);
 
-    // wind force: computed by using analytic functions
-    float3 w = WindForce(groundPositions[id.x], vertex0, vertex2, up, originalLength) * deltaTime;
-
     // v2 translation
-    //vertex2.x += sin(vertex2.y * 0.001 + time) * 0.0005;
-    vertex2 += s + w;
+    vertex2 += s + w + g;
 
-    // calculate v1 v0 based on v2
+    // calculate v1 based on v2
     float3 v1_dir = normalize(vertex1.xyz);
     vertex1.xyz = dot(vertex2, v1_dir) * 0.5f * v1_dir;
 
     // calculate length
-    grassLength[id.x] = BezierCurveArcLength(float2(0, 0), v1Positions[id.x].xy, v2Positions[id.x].xy);
+    grassLength[id.x] = BezierCurveArcLength(vertex0.xy, v1Positions[id.x].xy, v2Positions[id.x].xy);
     float lengthDiff = originalLength / grassLength[id.x];
 
     // correct new length

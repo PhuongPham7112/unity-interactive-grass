@@ -64,8 +64,8 @@ public class GrassModel : MonoBehaviour
         grassPhysicsCS.SetFloat("collisionStrength", collisionStrength);
         grassPhysicsCS.SetFloat("stiffnessCoefficient", stiffnessCoefficient);
         grassPhysicsCS.SetFloat("gravityParam", 0.0f);
-        grassPhysicsCS.SetVector("gravityDirection", new Vector4(0, 1, 0, 9.8f));
-        grassPhysicsCS.SetVector("gravityPoint", new Vector4(0, 0, 0, 9.8f));
+        grassPhysicsCS.SetVector("gravityDirection", new Vector4(0, -1.0f, 0, 9.81f));
+        grassPhysicsCS.SetVector("gravityPoint", new Vector4(0, 0, 0, 9.81f));
     }
 
     // Update is called once per frame
