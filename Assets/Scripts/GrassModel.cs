@@ -20,7 +20,7 @@ public class GrassModel : MonoBehaviour
     [SerializeField] public float decreaseAmount = 0.5f;
     [SerializeField] public float stiffnessCoefficient = 0.1f;
     [SerializeField] public float collisionStrength = 0.2f;
-    [SerializeField] public float grassMass = 1.0f;
+    [SerializeField] public float grassMass = 0.5f;
     [SerializeField] public float grassWidth = 1.0f;
     [SerializeField] public float grassHeight = 1.0f;
     [SerializeField] private int numPoints;

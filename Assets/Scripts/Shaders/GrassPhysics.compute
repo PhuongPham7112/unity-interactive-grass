@@ -89,8 +89,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     //TODO: direction of the blade of grass
     float3 up = float3(0, 1, 0);
     float right = float3(1, 0, 0);
-    float3 front = normalize(cross(right, vertex2 - vertex0));
-
+    
     
     // wind force: computed by using analytic functions
     float3 w = WindForce(groundPositions[id.x], vertex0, vertex2, up, originalLength) * deltaTime;
@@ -101,6 +100,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     float3 s = (idleV2 - vertex2) * stiffnessCoefficient * max(1 - collisionStrength, 0.1f);
     
     // gravity force
+    float3 front = normalize(cross(right, vertex2 - vertex0));
     float m = 0.5f;
     float3 g_e = m * (gravityDirection.xyz * gravityDirection.w * (1.0f - gravityParam) 
                     + normalize(gravityPoint.xyz - vertex2) * gravityPoint.w * gravityParam); // environmental gravity
@@ -116,7 +116,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
     // calculate v1 based on v2
     float lengthV0V2 = length(vertex2 - vertex0 - up * dot(vertex2 - vertex0, up)); // projected length
-    vertex1.xyz  = vertex0 + grassLength[id.x] * up * max(1 - lengthV0V2/grassLength[id.x], 0.05f * max(1, lengthV0V2/grassLength[id.x]));
+    vertex1.xyz  = vertex0 + originalLength * up * max(1 - lengthV0V2/originalLength, 0.05f * max(1, lengthV0V2/originalLength));
 
     // correct new length
     float3 v01 = lengthDiff * (vertex1 - vertex0);
