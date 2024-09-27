@@ -88,7 +88,8 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
     //TODO: direction of the blade of grass
     float3 up = float3(0, 1, 0);
-    float3 front = float3(0, 0, 1);
+    float right = float3(1, 0, 0);
+    float3 front = normalize(cross(right, vertex2 - vertex0));
 
     
     // wind force: computed by using analytic functions
