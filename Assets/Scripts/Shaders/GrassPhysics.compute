@@ -79,7 +79,6 @@ float3 WindForce(float3 groundPos, float3 v0, float3 v2, float3 up, float h)
 [numthreads(64,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    float bend = (1.0f - stiffnessCoefficient);
     float3 vertex0 = float3(0, 0, 0);
     float3 vertex1 = v1Positions[id.x].xyz;
     float3 vertex2 = v2Positions[id.x].xyz;
@@ -91,6 +90,15 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     float3 up = float3(0, 1, 0);
     float3 front = float3(0, 0, 1);
 
+    
+    // wind force: computed by using analytic functions
+    float3 w = WindForce(groundPositions[id.x], vertex0, vertex2, up, originalLength) * deltaTime;
+    // vertex2.x += sin(vertex2.y * 0.001 + time) * 0.0025;
+    
+    // stiffness force: the counterforce to previously applied forces
+    float3 idleV2 = float3(0, originalLength, 0);
+    float3 s = (idleV2 - vertex2) * stiffnessCoefficient * max(1 - collisionStrength, 0.1f);
+    
     // gravity force
     float m = 0.5f;
     float3 g_e = m * (gravityDirection.xyz * gravityDirection.w * (1.0f - gravityParam) 
@@ -98,14 +106,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     float3 g_f = 0.25f * length(g_e) * front; // front gravity
     float3 g = (g_f + g_e) * stiffnessCoefficient * deltaTime;
     
-    // wind force: computed by using analytic functions
-    float3 w = WindForce(groundPositions[id.x], vertex0, vertex2, up, originalLength) * deltaTime;
-    // vertex2.x += sin(vertex2.y * 0.001 + time) * 0.0025;
-
-    // stiffness force: the counterforce to previously applied forces
-    float3 idleV2 = float3(0, originalLength, 0);
-    float3 s = (idleV2 - vertex2) * stiffnessCoefficient * max(1 - collisionStrength, 0.1f);
-
     // v2 translation
     vertex2 += s + g + w;
     
