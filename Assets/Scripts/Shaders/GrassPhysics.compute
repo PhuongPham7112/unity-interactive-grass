@@ -101,8 +101,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     
     // gravity force
     float3 front = normalize(cross(right, vertex2 - vertex0));
-    float m = 0.5f;
-    float3 g_e = m * (gravityDirection.xyz * gravityDirection.w * (1.0f - gravityParam) 
+    float3 g_e = grassMass * (gravityDirection.xyz * gravityDirection.w * (1.0f - gravityParam)
                     + normalize(gravityPoint.xyz - vertex2) * gravityPoint.w * gravityParam); // environmental gravity
     float3 g_f = 0.25f * length(g_e) * front; // front gravity
     float3 g = (g_f + g_e) * stiffnessCoefficient * deltaTime;

@@ -8,6 +8,7 @@ public class GrassModel : MonoBehaviour
     private Vector4[] grassV1Positions; // v1 xyz + grass height
     private Vector4[] grassV2Positions; // v2 xyz + grass width
     private Vector3[] grassGroundPositions; // v2 xyz + grass width
+    
     private ComputeBuffer groundPosBuffer;
     private ComputeBuffer grass1PosBuffer;
     private ComputeBuffer grass2PosBuffer;
@@ -17,6 +18,7 @@ public class GrassModel : MonoBehaviour
     [SerializeField] public SphereCollider[] colliders;
     [SerializeField] private ComputeShader grassPhysicsCS;
     [SerializeField] private Material grassMaterial;
+    
     [SerializeField] public float decreaseAmount = 0.5f;
     [SerializeField] public float stiffnessCoefficient = 0.1f;
     [SerializeField] public float collisionStrength = 0.2f;
@@ -61,11 +63,13 @@ public class GrassModel : MonoBehaviour
         grassPhysicsCS.SetBuffer(kernelIndex, "groundPositions", groundPosBuffer);
 
         // Setup properties
+        grassPhysicsCS.SetFloat("grassMass", grassMass);
         grassPhysicsCS.SetFloat("collisionStrength", collisionStrength);
         grassPhysicsCS.SetFloat("stiffnessCoefficient", stiffnessCoefficient);
-        grassPhysicsCS.SetFloat("gravityParam", 0.0f);
+        
         grassPhysicsCS.SetVector("gravityDirection", new Vector4(0, -1.0f, 0, 9.81f));
         grassPhysicsCS.SetVector("gravityPoint", new Vector4(0, 0, 0, 9.81f));
+        grassPhysicsCS.SetFloat("gravityParam", 0.0f);
     }
 
     // Update is called once per frame
