@@ -17,8 +17,9 @@ float4 gravityPoint;
 float4 gravityDirection;
 
 // buffers
+int numColliders;
 RWTexture2D<float4> forceTexture;
-StructuredBuffer<float4> colliders[10];
+StructuredBuffer<float4> colliders;
 RWStructuredBuffer<float4> v1Positions;
 RWStructuredBuffer<float4> v2Positions;
 RWStructuredBuffer<float3> groundPositions;
@@ -109,6 +110,10 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     
     // collision force
     float3 d = float3(0, 0, 0);
+    for (int i = 0; i < numColliders; i++)
+    {
+
+    }
 
     // v2 translation
     vertex2 += s + g + w + d;

@@ -80,6 +80,7 @@ public class GrassModel : MonoBehaviour
 
         // Setup properties
         grassPhysicsCS.SetFloat("grassMass", grassMass);
+        grassPhysicsCS.SetFloat("numColliders", numColliders);
         grassPhysicsCS.SetFloat("collisionStrength", collisionStrength);
         grassPhysicsCS.SetFloat("stiffnessCoefficient", stiffnessCoefficient);
         
