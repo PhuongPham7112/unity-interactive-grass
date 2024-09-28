@@ -5,6 +5,7 @@ using UnityEngine;
 public class GrassModel : MonoBehaviour
 {
     private int kernelIndex;
+    private RenderTexture forceTexture;
     private Vector4[] collidersData; // colliders position + extent
     private Vector4[] grassV1Positions; // v1 xyz + grass height
     private Vector4[] grassV2Positions; // v2 xyz + grass width
@@ -51,7 +52,7 @@ public class GrassModel : MonoBehaviour
             grassV2Positions[i] = new Vector4(0, grassHeight, Mathf.Epsilon, grassWidth);
         }
 
-
+        // Fill the buffer with sphere colliders data
         collidersData = new Vector4[numColliders];
         for (int i = 0; i < numColliders; i++)
         {
@@ -61,6 +62,12 @@ public class GrassModel : MonoBehaviour
                 colliders[i].radius);
             Debug.Log(colliders[i].radius);
         }
+
+        // Set up texture for force
+        forceTexture = new RenderTexture(numPoints / 2, numPoints / 2, 0);
+        forceTexture.enableRandomWrite = true;
+        forceTexture.Create();
+        grassPhysicsCS.SetTexture(kernelIndex, "forceTexture", forceTexture);
 
         // Setup buffers
         collidersBuffer = new ComputeBuffer(numColliders, sizeof(float) * 4);
@@ -115,6 +122,7 @@ public class GrassModel : MonoBehaviour
 
     void OnDestroy()
     {
+        if (forceTexture) forceTexture.Release();
         collidersBuffer?.Release();
         groundPosBuffer?.Release();
         grass1PosBuffer?.Release();
