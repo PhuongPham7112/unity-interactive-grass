@@ -4,7 +4,7 @@
 // time updated var
 float time;
 float deltaTime;
-float4x4 objectToWorldMatrix;
+float4x4 worldToLocalMatrix;
 
 // user-provided physical model params
 float grassMass;
@@ -22,7 +22,7 @@ RWTexture2D<float4> forceTexture;
 StructuredBuffer<float4> colliders;
 RWStructuredBuffer<float4> v1Positions;
 RWStructuredBuffer<float4> v2Positions;
-RWStructuredBuffer<float3> groundPositions;
+RWStructuredBuffer<float3> groundPositions; // world ground position
 
 float B(float2 v0, float2 v1, float2 v2, float t)
 {
@@ -112,7 +112,32 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     float3 d = float3(0, 0, 0);
     for (int i = 0; i < numColliders; i++)
     {
+        float3 colliderPos = colliders[i].xyz;
+        float colliderRadius = colliders[i].w;
+        
+        if (distance(groundPositions[id.x], colliderPos) - colliderRadius < originalLength)
+        {
+            float3 v1PositionsWorld = groundPositions[id.x] + (vertex1 - vertex0);
+            float3 v2PositionsWorld = groundPositions[id.x] + (vertex2 - vertex0);
+            float3 midCurvePoint = 0.25f * groundPositions[id.x] + 0.5f * v1PositionsWorld + 0.25f * v2PositionsWorld;
+        
 
+            float3 dMid = min(length(colliderPos - midCurvePoint) - colliderRadius, 0.0f) * normalize(colliderPos - midCurvePoint);
+
+            // Case 1: v2 in sphere => move v2 to the nearest border
+            float distV2 = length(colliderPos - v2PositionsWorld) - colliderRadius;
+            if (distV2 < 0.0f)
+            {
+                d += distV2 * (colliderPos - v2PositionsWorld) / (distV2 + colliderRadius);
+            }
+
+            // Case 2: curve in sphere
+            float distMid = length(colliderPos - midCurvePoint) - colliderRadius;
+            if (distMid < 0.0f)
+            {
+                d += 1.0f * distMid * (colliderPos - midCurvePoint) / (distMid + colliderRadius);
+            }
+        }
     }
 
     // v2 translation

@@ -56,9 +56,9 @@ public class GrassModel : MonoBehaviour
         collidersData = new Vector4[numColliders];
         for (int i = 0; i < numColliders; i++)
         {
-            collidersData[i] = new Vector4(colliders[i].center.x, 
-                colliders[i].center.y,
-                colliders[i].center.z,
+            collidersData[i] = new Vector4(colliders[i].transform.position.x,
+                colliders[i].transform.position.y,
+                colliders[i].transform.position.z,
                 colliders[i].radius);
             Debug.Log(colliders[i].radius);
         }
@@ -100,9 +100,9 @@ public class GrassModel : MonoBehaviour
     void Update()
     {
         // Run the compute shader
-        grassPhysicsCS.SetFloat("deltaTime", Time.deltaTime);
         grassPhysicsCS.SetFloat("time", Time.time);
-        grassPhysicsCS.SetMatrix("objectToWorldMatrix", transform.localToWorldMatrix);
+        grassPhysicsCS.SetFloat("deltaTime", Time.deltaTime);
+        grassPhysicsCS.SetMatrix("worldToLocalMatrix", transform.worldToLocalMatrix);
         grassPhysicsCS.Dispatch(kernelIndex, numPoints / 8, 1, 1);
 
         // Set unique properties per object
