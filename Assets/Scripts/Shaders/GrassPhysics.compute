@@ -17,10 +17,11 @@ float4 gravityPoint;
 float4 gravityDirection;
 
 // buffers
-RWStructuredBuffer<float> grassLength;
-RWStructuredBuffer<float3> groundPositions;
+RWTexture2D<float4> forceTexture;
+StructuredBuffer<float4> colliders[10];
 RWStructuredBuffer<float4> v1Positions;
 RWStructuredBuffer<float4> v2Positions;
+RWStructuredBuffer<float3> groundPositions;
 
 float B(float2 v0, float2 v1, float2 v2, float t)
 {
@@ -85,11 +86,11 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
     float originalLength = v1Positions[id.x].w;
     float originalWidth = v2Positions[id.x].w;
+    float4 translation;
 
     //TODO: direction of the blade of grass
     float3 up = float3(0, 1, 0);
-    float right = float3(1, 0, 0);
-    
+    float3 right = float3(1, 0, 0);
     
     // wind force: computed by using analytic functions
     float3 w = WindForce(groundPositions[id.x], vertex0, vertex2, up, originalLength) * deltaTime;
@@ -106,12 +107,15 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     float3 g_f = 0.25f * length(g_e) * front; // front gravity
     float3 g = (g_f + g_e) * stiffnessCoefficient * deltaTime;
     
+    // collision force
+    float3 d = float3(0, 0, 0);
+
     // v2 translation
-    vertex2 += s + g + w;
+    vertex2 += s + g + w + d;
     
     // calculate length
-    grassLength[id.x] = BezierCurveArcLength(vertex0.xy, v1Positions[id.x].xy, v2Positions[id.x].xy);
-    float lengthDiff = originalLength / grassLength[id.x];
+    float currLength = BezierCurveArcLength(vertex0.xy, v1Positions[id.x].xy, v2Positions[id.x].xy);
+    float lengthDiff = originalLength / currLength;
 
     // calculate v1 based on v2
     float lengthV0V2 = length(vertex2 - vertex0 - up * dot(vertex2 - vertex0, up)); // projected length
