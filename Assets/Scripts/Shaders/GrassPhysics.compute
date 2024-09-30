@@ -75,7 +75,7 @@ float3 WindForce(float3 groundPos, float3 v0, float3 v2, float3 up, float h)
     float directAlignment = 1.0f - abs(dot(normalize(WindFunction(groundPos)), normalize(v2 - v0)));
     float heightRatio = dot((v2 - v0), up) / h;
     float alignmentValue = directAlignment * heightRatio;
-    return WindFunction(groundPos) * alignmentValue;
+    return WindFunction(groundPos) * alignmentValue * 0.25f;
 }
 
 [numthreads(64,1,1)]
@@ -87,80 +87,89 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     float3 vertex2 = v2Positions[id.x].xyz;
 
     float originalLength = v1Positions[id.x].w;
+    float invOriginalLength = 1.0f / originalLength;
     float originalWidth = v2Positions[id.x].w;
 
-    //TODO: direction of the blade of grass
+    //direction of the blade of grass
     float3 up = float3(0, 1, 0);
     float3 right = float3(1, 0, 0);
     
+    // collision force
+    int isCollided = 0;
+    {
+        float3 d = float3(0, 0, 0);
+        for (int i = 0; i < numColliders; i++)
+        {
+            float3 colliderPos = colliders[i].xyz;
+            float colliderRadius = colliders[i].w;
+            
+            if (distance(groundPositions[id.x], colliderPos) - colliderRadius < originalLength)
+            {
+                float3 v1PositionsWorld = groundPositions[id.x] + (vertex1 - vertex0);
+                float3 v2PositionsWorld = groundPositions[id.x] + (vertex2 - vertex0);
+                float3 midCurvePoint = 0.25f * groundPositions[id.x] + 0.5f * v1PositionsWorld + 0.25f * v2PositionsWorld;
+    
+                float3 dMid = min(length(colliderPos - midCurvePoint) - colliderRadius, 0.0f) * normalize(colliderPos - midCurvePoint);
+    
+                // Case 1: v2 in sphere => move v2 to the nearest border
+                float distV2 = length(colliderPos - v2PositionsWorld) - colliderRadius;
+                if (distV2 < 0.0f)
+                {
+                    isCollided = 1;
+                    float3 force = distV2 * (colliderPos - v2PositionsWorld) / (distV2 + colliderRadius);
+                    forceBuffer[id.x] += dot(force, force);
+                    d += force;
+                }
+    
+                // Case 2: curve in sphere
+                float distMid = length(colliderPos - midCurvePoint) - colliderRadius;
+                if (distMid < 0.0f)
+                {
+                    isCollided = 1;
+                    float3 force = 1.0f * distMid * (colliderPos - midCurvePoint) / (distMid + colliderRadius);
+                    forceBuffer[id.x] += dot(force, force);
+                    d += force;
+                }
+            }
+        }
+        vertex2 += d;
+    }
+
     // wind force: computed by using analytic functions
-    vertex2.x += sin(vertex2.y * 0.001 + time) * 0.0025;
-    float3 w = float3(0, 0, 0); //WindForce(groundPositions[id.x], vertex0, vertex2, up, originalLength);
+    float3 w = (1 - isCollided) * WindForce(groundPositions[id.x], vertex0, vertex2, up, originalLength);
+    
+    // gravity force
+    float3 front = normalize(cross(right, vertex2 - vertex0));
+    float3 g_e = grassMass * (gravityDirection.xyz * gravityDirection.w * (1.0f - gravityParam)
+    + normalize(gravityPoint.xyz - vertex2) * gravityPoint.w * gravityParam); // environmental gravity
+    float3 g_f = 0.25f * length(g_e) * front; // front gravity
+    float3 g = (g_f + g_e) * stiffnessCoefficient;
     
     // stiffness force: the counterforce to previously applied forces
     float collisionStrength = forceBuffer[id.x];
     collisionStrength = max(0.0f, collisionStrength - collisionDecreaseAmount * deltaTime);
     float3 idleV2 = float3(0, originalLength, 0);
-    float3 s = (idleV2 - vertex2) * stiffnessCoefficient * max(1 - collisionStrength, 0.1f);
+    float3 s = (idleV2 - vertex2) * (1.0f - 0.25f * stiffnessCoefficient) * max(1 - collisionStrength, 0.1f);
     
-    // gravity force
-    float3 front = normalize(cross(right, vertex2 - vertex0));
-    float3 g_e = grassMass * (gravityDirection.xyz * gravityDirection.w * (1.0f - gravityParam)
-                    + normalize(gravityPoint.xyz - vertex2) * gravityPoint.w * gravityParam); // environmental gravity
-    float3 g_f = 0.25f * length(g_e) * front; // front gravity
-    float3 g = (g_f + g_e) * stiffnessCoefficient * deltaTime;
+    // v2 translation
+    vertex2 += (s + w + g) * deltaTime;
     
-    // collision force
-    float3 d = float3(0, 0, 0);
-    for (int i = 0; i < numColliders; i++)
     {
-        float3 colliderPos = colliders[i].xyz;
-        float colliderRadius = colliders[i].w;
+        // calculate length
+        float currLength = BezierCurveArcLength(vertex0.xy, v1Positions[id.x].xy, v2Positions[id.x].xy);
+        float lengthDiff = originalLength / currLength;
         
-        if (distance(groundPositions[id.x], colliderPos) - colliderRadius < originalLength)
-        {
-            float3 v1PositionsWorld = groundPositions[id.x] + (vertex1 - vertex0);
-            float3 v2PositionsWorld = groundPositions[id.x] + (vertex2 - vertex0);
-            float3 midCurvePoint = 0.25f * groundPositions[id.x] + 0.5f * v1PositionsWorld + 0.25f * v2PositionsWorld;
-
-            float3 dMid = min(length(colliderPos - midCurvePoint) - colliderRadius, 0.0f) * normalize(colliderPos - midCurvePoint);
-
-            // Case 1: v2 in sphere => move v2 to the nearest border
-            float distV2 = length(colliderPos - v2PositionsWorld) - colliderRadius;
-            if (distV2 < 0.0f)
-            {
-                float3 force = distV2 * (colliderPos - v2PositionsWorld) / (distV2 + colliderRadius);
-                forceBuffer[id.x] += dot(force, force);
-                d += force;
-            }
-
-            // Case 2: curve in sphere
-            float distMid = length(colliderPos - midCurvePoint) - colliderRadius;
-            if (distMid < 0.0f)
-            {
-                float3 force = 1.0f * distMid * (colliderPos - midCurvePoint) / (distMid + colliderRadius);
-                forceBuffer[id.x] += dot(force, force);
-                d += force;
-            }
-        }
+        // calculate v1 based on v2
+        float lengthV0V2 = length(vertex2 - vertex0 - up * dot(vertex2 - vertex0, up)); // projected length
+        vertex1.xyz  = vertex0 + originalLength * up * max(1 - lengthV0V2 * invOriginalLength, 0.05f * max(1, lengthV0V2 * invOriginalLength));
+        
+        // correct new length
+        float3 v01 = lengthDiff * (vertex1 - vertex0);
+        float3 v12 = lengthDiff * (vertex2 - vertex1);
+        vertex1 = v01;
+        vertex2 = vertex1.xyz + v12;
     }
 
-    // v2 translation
-    vertex2 += s + g + w + d;
-    
-    // calculate length
-    float currLength = BezierCurveArcLength(vertex0.xy, v1Positions[id.x].xy, v2Positions[id.x].xy);
-    float lengthDiff = originalLength / currLength;
-
-    // calculate v1 based on v2
-    float lengthV0V2 = length(vertex2 - vertex0 - up * dot(vertex2 - vertex0, up)); // projected length
-    vertex1.xyz  = vertex0 + originalLength * up * max(1 - lengthV0V2/originalLength, 0.05f * max(1, lengthV0V2/originalLength));
-
-    // correct new length
-    float3 v01 = lengthDiff * (vertex1 - vertex0);
-    float3 v12 = lengthDiff * (vertex2 - vertex1);
-    vertex1 = v01;
-    vertex2 = vertex1.xyz + v12;
 
     // output
     v1Positions[id.x] = float4(vertex1, originalLength);

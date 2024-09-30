@@ -59,15 +59,14 @@ public class GrassModel : MonoBehaviour
             collidersData[i] = new Vector4(colliders[i].transform.position.x,
                 colliders[i].transform.position.y,
                 colliders[i].transform.position.z,
-                colliders[i].radius);
-            Debug.Log(colliders[i].radius);
+                colliders[i].radius * colliders[i].transform.localScale.x);
         }
 
         // Fill the buffer with force data
         forceData = new float[numPoints * numPoints];
         for (int i = 0; i < numPoints * numPoints; i++)
         {
-            forceData[i] = 0.2f;
+            forceData[i] = 0.0f;
         }
 
         // Setup buffers
@@ -91,6 +90,7 @@ public class GrassModel : MonoBehaviour
         grassPhysicsCS.SetBuffer(kernelIndex, "groundPositions", groundPosBuffer);
 
         // Setup properties
+        grassPhysicsCS.SetFloat("deltaTime", Time.deltaTime);
         grassPhysicsCS.SetFloat("grassMass", grassMass);
         grassPhysicsCS.SetFloat("numColliders", numColliders);
         grassPhysicsCS.SetFloat("stiffnessCoefficient", stiffnessCoefficient);
@@ -106,7 +106,6 @@ public class GrassModel : MonoBehaviour
     {
         // Run the compute shader
         grassPhysicsCS.SetFloat("time", Time.time);
-        grassPhysicsCS.SetFloat("deltaTime", Time.deltaTime);
         grassPhysicsCS.SetMatrix("worldToLocalMatrix", transform.worldToLocalMatrix);
         grassPhysicsCS.Dispatch(kernelIndex, numPoints / 8, 1, 1);
 
