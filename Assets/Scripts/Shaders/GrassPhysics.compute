@@ -105,12 +105,11 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             
             if (distance(groundPositions[id.x], colliderPos) - colliderRadius < originalLength)
             {
+                // TODO: convert to world space correctly
                 float3 v1PositionsWorld = groundPositions[id.x] + (vertex1 - vertex0);
                 float3 v2PositionsWorld = groundPositions[id.x] + (vertex2 - vertex0);
                 float3 midCurvePoint = 0.25f * groundPositions[id.x] + 0.5f * v1PositionsWorld + 0.25f * v2PositionsWorld;
-    
-                float3 dMid = min(length(colliderPos - midCurvePoint) - colliderRadius, 0.0f) * normalize(colliderPos - midCurvePoint);
-    
+        
                 // Case 1: v2 in sphere => move v2 to the nearest border
                 float distV2 = length(colliderPos - v2PositionsWorld) - colliderRadius;
                 if (distV2 < 0.0f)
@@ -135,25 +134,29 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         vertex2 += d;
     }
 
-    // wind force: computed by using analytic functions
-    float3 w = (1 - isCollided) * WindForce(groundPositions[id.x], vertex0, vertex2, up, originalLength);
+    // natural forces
+    {
+        // wind force: computed by using analytic functions
+        float3 w = (1 - isCollided) * WindForce(groundPositions[id.x], vertex0, vertex2, up, originalLength);
+        
+        // gravity force
+        float3 front = normalize(cross(right, vertex2 - vertex0));
+        float3 g_e = grassMass * (gravityDirection.xyz * gravityDirection.w * (1.0f - gravityParam)
+        + normalize(gravityPoint.xyz - vertex2) * gravityPoint.w * gravityParam); // environmental gravity
+        float3 g_f = 0.25f * length(g_e) * front; // front gravity
+        float3 g = (g_f + g_e) * stiffnessCoefficient;
+        
+        // stiffness force: the counterforce to previously applied forces
+        float collisionStrength = forceBuffer[id.x];
+        collisionStrength = max(0.0f, collisionStrength - collisionDecreaseAmount * deltaTime);
+        float3 idleV2 = float3(0, originalLength, 0);
+        float3 s = (idleV2 - vertex2) * (1.0f - 0.25f * stiffnessCoefficient) * max(1 - collisionStrength, 0.1f);
+        
+        // v2 translation
+        vertex2 += (s + w + g) * deltaTime;
+    }
     
-    // gravity force
-    float3 front = normalize(cross(right, vertex2 - vertex0));
-    float3 g_e = grassMass * (gravityDirection.xyz * gravityDirection.w * (1.0f - gravityParam)
-    + normalize(gravityPoint.xyz - vertex2) * gravityPoint.w * gravityParam); // environmental gravity
-    float3 g_f = 0.25f * length(g_e) * front; // front gravity
-    float3 g = (g_f + g_e) * stiffnessCoefficient;
-    
-    // stiffness force: the counterforce to previously applied forces
-    float collisionStrength = forceBuffer[id.x];
-    collisionStrength = max(0.0f, collisionStrength - collisionDecreaseAmount * deltaTime);
-    float3 idleV2 = float3(0, originalLength, 0);
-    float3 s = (idleV2 - vertex2) * (1.0f - 0.25f * stiffnessCoefficient) * max(1 - collisionStrength, 0.1f);
-    
-    // v2 translation
-    vertex2 += (s + w + g) * deltaTime;
-    
+    // correct blade length
     {
         // calculate length
         float currLength = BezierCurveArcLength(vertex0.xy, v1Positions[id.x].xy, v2Positions[id.x].xy);
