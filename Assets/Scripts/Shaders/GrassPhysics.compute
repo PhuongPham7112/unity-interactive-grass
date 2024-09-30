@@ -81,7 +81,7 @@ float3 WindForce(float3 groundPos, float3 v0, float3 v2, float3 up, float h)
 [numthreads(64,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-
+    // TODO: make sure blade v2 is not underground
     float3 vertex0 = float3(0, 0, 0);
     float3 vertex1 = v1Positions[id.x].xyz;
     float3 vertex2 = v2Positions[id.x].xyz;
@@ -158,19 +158,22 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     
     // correct blade length
     {
+        // make sure v2 is above ground
+        vertex2 = vertex2 - up * min(0.0f, dot(up, vertex2 - vertex0));
+
         // calculate length
         float currLength = BezierCurveArcLength(vertex0.xy, v1Positions[id.x].xy, v2Positions[id.x].xy);
         float lengthDiff = originalLength / currLength;
         
         // calculate v1 based on v2
         float lengthV0V2 = length(vertex2 - vertex0 - up * dot(vertex2 - vertex0, up)); // projected length
-        vertex1.xyz  = vertex0 + originalLength * up * max(1 - lengthV0V2 * invOriginalLength, 0.05f * max(1, lengthV0V2 * invOriginalLength));
+        vertex1  = vertex0 + originalLength * up * max(1 - lengthV0V2 * invOriginalLength, 0.05f * max(1.0f, lengthV0V2 * invOriginalLength));
         
         // correct new length
         float3 v01 = lengthDiff * (vertex1 - vertex0);
         float3 v12 = lengthDiff * (vertex2 - vertex1);
         vertex1 = v01;
-        vertex2 = vertex1.xyz + v12;
+        vertex2 = vertex1 + v12;
     }
 
 
