@@ -104,7 +104,15 @@ public class GrassModel : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        // Run the compute shader
+        // update collider buffer
+        for (int i = 0; i < numColliders; i++)
+        {
+            collidersData[i][0] = colliders[i].transform.position.x;
+            collidersData[i][1] = colliders[i].transform.position.y;
+            collidersData[i][2] = colliders[i].transform.position.z;
+        }
+        collidersBuffer.SetData(collidersData);
+        grassPhysicsCS.SetBuffer(kernelIndex, "colliders", collidersBuffer);
         grassPhysicsCS.SetFloat("time", Time.time);
         grassPhysicsCS.SetMatrix("worldToLocalMatrix", transform.worldToLocalMatrix);
         grassPhysicsCS.Dispatch(kernelIndex, numPoints / 8, 1, 1);

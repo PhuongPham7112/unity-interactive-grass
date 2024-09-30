@@ -19,9 +19,9 @@ float4 gravityDirection;
 // buffers
 int numColliders;
 StructuredBuffer<float4> colliders;
-RWStructuredBuffer<float> forceBuffer;
-RWStructuredBuffer<float4> v1Positions;
-RWStructuredBuffer<float4> v2Positions;
+RWStructuredBuffer<float> forceBuffer; // collision force data
+RWStructuredBuffer<float4> v1Positions; // v1 buffer + original width
+RWStructuredBuffer<float4> v2Positions; // v2 buffer + original length
 RWStructuredBuffer<float3> groundPositions; // world ground position
 
 float B(float2 v0, float2 v1, float2 v2, float t)
