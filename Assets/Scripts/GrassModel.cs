@@ -5,12 +5,13 @@ using UnityEngine;
 public class GrassModel : MonoBehaviour
 {
     private int kernelIndex;
-    private RenderTexture forceTexture;
+    private float[] forceData;
     private Vector4[] collidersData; // colliders position + extent
     private Vector4[] grassV1Positions; // v1 xyz + grass height
     private Vector4[] grassV2Positions; // v2 xyz + grass width
     private Vector3[] grassGroundPositions; // v2 xyz + grass width
     
+    private ComputeBuffer forceBuffer;
     private ComputeBuffer collidersBuffer;
     private ComputeBuffer groundPosBuffer;
     private ComputeBuffer grass1PosBuffer;
@@ -20,9 +21,8 @@ public class GrassModel : MonoBehaviour
     [SerializeField] private ComputeShader grassPhysicsCS;
     [SerializeField] private Material grassMaterial;
     
-    [SerializeField] public float decreaseAmount = 0.5f;
+    [SerializeField] public float collisionDecreaseAmount = 0.5f;
     [SerializeField] public float stiffnessCoefficient = 0.1f;
-    [SerializeField] public float collisionStrength = 0.2f;
     [SerializeField] public float grassMass = 0.5f;
     [SerializeField] public float grassWidth = 1.0f;
     [SerializeField] public float grassHeight = 1.0f;
@@ -63,23 +63,28 @@ public class GrassModel : MonoBehaviour
             Debug.Log(colliders[i].radius);
         }
 
-        // Set up texture for force
-        forceTexture = new RenderTexture(numPoints / 2, numPoints / 2, 0);
-        forceTexture.enableRandomWrite = true;
-        forceTexture.Create();
-        grassPhysicsCS.SetTexture(kernelIndex, "forceTexture", forceTexture);
+        // Fill the buffer with force data
+        forceData = new float[numPoints * numPoints];
+        for (int i = 0; i < numPoints * numPoints; i++)
+        {
+            forceData[i] = 0.2f;
+        }
 
         // Setup buffers
+        forceBuffer = new ComputeBuffer(numPoints * numPoints, sizeof(float));
         collidersBuffer = new ComputeBuffer(numColliders, sizeof(float) * 4);
         groundPosBuffer = new ComputeBuffer(numPoints, sizeof(float) * 3);
         grass1PosBuffer = new ComputeBuffer(numPoints, sizeof(float) * 4);
         grass2PosBuffer = new ComputeBuffer(numPoints, sizeof(float) * 4);
 
+        forceBuffer.SetData(forceData);
         collidersBuffer.SetData(collidersData);
         groundPosBuffer.SetData(grassGroundPositions);
         grass1PosBuffer.SetData(grassV1Positions);
         grass2PosBuffer.SetData(grassV2Positions);
 
+        // Set buffers
+        grassPhysicsCS.SetBuffer(kernelIndex, "forceBuffer", forceBuffer);
         grassPhysicsCS.SetBuffer(kernelIndex, "colliders", collidersBuffer);
         grassPhysicsCS.SetBuffer(kernelIndex, "v1Positions", grass1PosBuffer);
         grassPhysicsCS.SetBuffer(kernelIndex, "v2Positions", grass2PosBuffer);
@@ -88,8 +93,8 @@ public class GrassModel : MonoBehaviour
         // Setup properties
         grassPhysicsCS.SetFloat("grassMass", grassMass);
         grassPhysicsCS.SetFloat("numColliders", numColliders);
-        grassPhysicsCS.SetFloat("collisionStrength", collisionStrength);
         grassPhysicsCS.SetFloat("stiffnessCoefficient", stiffnessCoefficient);
+        grassPhysicsCS.SetFloat("collisionDecreaseAmount", collisionDecreaseAmount);
         
         grassPhysicsCS.SetVector("gravityDirection", new Vector4(0, -1.0f, 0, 9.81f));
         grassPhysicsCS.SetVector("gravityPoint", new Vector4(0, 0, 0, 9.81f));
@@ -122,7 +127,7 @@ public class GrassModel : MonoBehaviour
 
     void OnDestroy()
     {
-        if (forceTexture) forceTexture.Release();
+        forceBuffer?.Release();
         collidersBuffer?.Release();
         groundPosBuffer?.Release();
         grass1PosBuffer?.Release();

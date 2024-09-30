@@ -8,8 +8,8 @@ float4x4 worldToLocalMatrix;
 
 // user-provided physical model params
 float grassMass;
-float collisionStrength;
 float stiffnessCoefficient;
+float collisionDecreaseAmount;
 
 // gravity
 float gravityParam;
@@ -18,8 +18,8 @@ float4 gravityDirection;
 
 // buffers
 int numColliders;
-RWTexture2D<float4> forceTexture;
 StructuredBuffer<float4> colliders;
+RWStructuredBuffer<float> forceBuffer;
 RWStructuredBuffer<float4> v1Positions;
 RWStructuredBuffer<float4> v2Positions;
 RWStructuredBuffer<float3> groundPositions; // world ground position
@@ -81,23 +81,25 @@ float3 WindForce(float3 groundPos, float3 v0, float3 v2, float3 up, float h)
 [numthreads(64,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
+
     float3 vertex0 = float3(0, 0, 0);
     float3 vertex1 = v1Positions[id.x].xyz;
     float3 vertex2 = v2Positions[id.x].xyz;
 
     float originalLength = v1Positions[id.x].w;
     float originalWidth = v2Positions[id.x].w;
-    float4 translation;
 
     //TODO: direction of the blade of grass
     float3 up = float3(0, 1, 0);
     float3 right = float3(1, 0, 0);
     
     // wind force: computed by using analytic functions
-    float3 w = WindForce(groundPositions[id.x], vertex0, vertex2, up, originalLength) * deltaTime;
-    // vertex2.x += sin(vertex2.y * 0.001 + time) * 0.0025;
+    vertex2.x += sin(vertex2.y * 0.001 + time) * 0.0025;
+    float3 w = float3(0, 0, 0); //WindForce(groundPositions[id.x], vertex0, vertex2, up, originalLength);
     
     // stiffness force: the counterforce to previously applied forces
+    float collisionStrength = forceBuffer[id.x];
+    collisionStrength = max(0.0f, collisionStrength - collisionDecreaseAmount * deltaTime);
     float3 idleV2 = float3(0, originalLength, 0);
     float3 s = (idleV2 - vertex2) * stiffnessCoefficient * max(1 - collisionStrength, 0.1f);
     
@@ -120,7 +122,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             float3 v1PositionsWorld = groundPositions[id.x] + (vertex1 - vertex0);
             float3 v2PositionsWorld = groundPositions[id.x] + (vertex2 - vertex0);
             float3 midCurvePoint = 0.25f * groundPositions[id.x] + 0.5f * v1PositionsWorld + 0.25f * v2PositionsWorld;
-        
 
             float3 dMid = min(length(colliderPos - midCurvePoint) - colliderRadius, 0.0f) * normalize(colliderPos - midCurvePoint);
 
@@ -128,14 +129,18 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             float distV2 = length(colliderPos - v2PositionsWorld) - colliderRadius;
             if (distV2 < 0.0f)
             {
-                d += distV2 * (colliderPos - v2PositionsWorld) / (distV2 + colliderRadius);
+                float3 force = distV2 * (colliderPos - v2PositionsWorld) / (distV2 + colliderRadius);
+                forceBuffer[id.x] += dot(force, force);
+                d += force;
             }
 
             // Case 2: curve in sphere
             float distMid = length(colliderPos - midCurvePoint) - colliderRadius;
             if (distMid < 0.0f)
             {
-                d += 1.0f * distMid * (colliderPos - midCurvePoint) / (distMid + colliderRadius);
+                float3 force = 1.0f * distMid * (colliderPos - midCurvePoint) / (distMid + colliderRadius);
+                forceBuffer[id.x] += dot(force, force);
+                d += force;
             }
         }
     }
