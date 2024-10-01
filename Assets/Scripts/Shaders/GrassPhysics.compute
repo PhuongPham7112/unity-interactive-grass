@@ -98,7 +98,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     // collision force
     int isCollided = 0;
     {
-        // TODO: handle squashed grass cases
         float3 d = float3(0, 0, 0);
         for (int i = 0; i < numColliders; i++)
         {
@@ -139,7 +138,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     // natural forces
     {
         // wind force: computed by using analytic functions
-        float3 w = (1 - isCollided) * WindForce(groundPositions[id.x], vertex0, vertex2, up, originalLength);
+        float3 w = WindForce(groundPositions[id.x], vertex0, vertex2, up, originalLength);
         
         // gravity force
         float3 front = normalize(cross(right, vertex2 - vertex0));
@@ -151,6 +150,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         // stiffness force: the counterforce to previously applied forces
         float collisionStrength = forceBuffer[id.x];
         collisionStrength = max(0.0f, collisionStrength - collisionDecreaseAmount * deltaTime);
+        forceBuffer[id.x] = collisionStrength;
         float3 s = (idleV2 - vertex2) * (1.0f - 0.25f * stiffnessCoefficient) * max(1 - collisionStrength, 0.1f);
         
         // v2 translation
