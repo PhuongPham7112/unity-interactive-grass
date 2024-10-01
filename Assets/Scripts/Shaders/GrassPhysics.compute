@@ -89,6 +89,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     float originalLength = v1Positions[id.x].w;
     float invOriginalLength = 1.0f / originalLength;
     float originalWidth = v2Positions[id.x].w;
+    float3 idleV2 = float3(0, originalLength, 0);
 
     //direction of the blade of grass
     float3 up = float3(0, 1, 0);
@@ -97,13 +98,14 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     // collision force
     int isCollided = 0;
     {
+        // TODO: handle squashed grass cases
         float3 d = float3(0, 0, 0);
         for (int i = 0; i < numColliders; i++)
         {
             float3 colliderPos = colliders[i].xyz;
             float colliderRadius = colliders[i].w;
-            
-            if (distance(groundPositions[id.x], colliderPos) - colliderRadius < originalLength)
+            float dist = distance(groundPositions[id.x], colliderPos) - colliderRadius;
+            if (dist > 0.01f && dist < originalLength)
             {
                 // TODO: convert to world space correctly
                 float3 v1PositionsWorld = groundPositions[id.x] + (vertex1 - vertex0);
@@ -125,7 +127,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                 if (distMid < 0.0f)
                 {
                     isCollided = 1;
-                    float3 force = 1.0f * distMid * (colliderPos - midCurvePoint) / (distMid + colliderRadius);
+                    float3 force = distMid * (colliderPos - midCurvePoint) / (distMid + colliderRadius);
                     forceBuffer[id.x] += dot(force, force);
                     d += force;
                 }
@@ -149,7 +151,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         // stiffness force: the counterforce to previously applied forces
         float collisionStrength = forceBuffer[id.x];
         collisionStrength = max(0.0f, collisionStrength - collisionDecreaseAmount * deltaTime);
-        float3 idleV2 = float3(0, originalLength, 0);
         float3 s = (idleV2 - vertex2) * (1.0f - 0.25f * stiffnessCoefficient) * max(1 - collisionStrength, 0.1f);
         
         // v2 translation
