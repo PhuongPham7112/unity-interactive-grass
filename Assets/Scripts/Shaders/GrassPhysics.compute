@@ -4,7 +4,6 @@
 // time updated var
 float time;
 float deltaTime;
-float4x4 worldToLocalMatrix;
 
 // user-provided physical model params
 float grassMass;

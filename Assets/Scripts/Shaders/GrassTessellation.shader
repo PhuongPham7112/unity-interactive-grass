@@ -26,6 +26,8 @@ Shader "Custom/GrassTessellation"
             #pragma domain domain
             #pragma target 5.0
             #include "UnityCG.cginc"
+            #define UNITY_INDIRECT_DRAW_ARGS IndirectDrawIndexedArgs
+            #include "UnityIndirect.cginc"
 
             int _Index;
             float3 _BezierControlV0;

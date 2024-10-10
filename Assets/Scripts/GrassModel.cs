@@ -106,6 +106,10 @@ public class GrassModel : MonoBehaviour
         grassPhysicsCS.SetVector("gravityDirection", new Vector4(0, -1.0f, 0, 9.81f));
         grassPhysicsCS.SetVector("gravityPoint", new Vector4(0, 0, 0, 9.81f));
         grassPhysicsCS.SetFloat("gravityParam", 0.0f);
+
+        // culling setup
+        commandBuf = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments, commandCount, GraphicsBuffer.IndirectDrawIndexedArgs.size);
+        commandData = new GraphicsBuffer.IndirectDrawIndexedArgs[commandCount];
     }
 
     // Update is called once per frame
@@ -136,6 +140,13 @@ public class GrassModel : MonoBehaviour
                 childRenderer.SetPropertyBlock(propertyBlock);
             }
         }
+
+        // indirect rendering
+        RenderParams rp = new RenderParams(grassMaterial);
+        commandData[0].indexCountPerInstance = grassMesh.GetIndexCount(0);
+        commandData[0].instanceCount = 10;
+        commandBuf.SetData(commandData);
+        Graphics.RenderMeshIndirect(rp, grassMesh, commandBuf, commandCount);
     }
 
     void OnDestroy()
@@ -145,5 +156,7 @@ public class GrassModel : MonoBehaviour
         grass1PosBuffer?.Release();
         grass2PosBuffer?.Release();
         modelMatrixBuffer?.Release();
+        commandBuf?.Release();
+        commandBuf = null;
     }
 }
