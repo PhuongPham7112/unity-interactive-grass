@@ -17,9 +17,10 @@ public class GrassModel : MonoBehaviour
     private ComputeBuffer grass1PosBuffer;
     private ComputeBuffer grass2PosBuffer;
     
-    [SerializeField] public SphereCollider[] colliders;
-    [SerializeField] private ComputeShader grassPhysicsCS;
     [SerializeField] private Material grassMaterial;
+    [SerializeField] private ComputeShader grassPhysicsCS;
+    [SerializeField] private ComputeShader grassCulling;
+    [SerializeField] public SphereCollider[] colliders;
     
     [SerializeField] public float collisionDecreaseAmount = 0.5f;
     [SerializeField] public float stiffnessCoefficient = 0.1f;
@@ -44,8 +45,12 @@ public class GrassModel : MonoBehaviour
         // Fill the buffer with the v2 positions of the child objects
         grassV1Positions = new Vector4[numPoints];
         grassV2Positions = new Vector4[numPoints];
+        forceData = new float[numPoints]; // Fill the buffer with force data
+        grassModelMatrices = new Matrix4x4[numPoints]; // Fill the buffer with model matrix
         for (int i = 0; i < numPoints; i++)
         {
+            forceData[i] = 0.0f;
+            grassModelMatrices[i] = gameObject.transform.GetChild(i).localToWorldMatrix;
             grassV1Positions[i] = new Vector4(0, grassHeight * 0.5f, Mathf.Epsilon, grassHeight);
             grassV2Positions[i] = new Vector4(0, grassHeight, Mathf.Epsilon, grassWidth);
         }
@@ -58,20 +63,6 @@ public class GrassModel : MonoBehaviour
                 colliders[i].transform.position.y,
                 colliders[i].transform.position.z,
                 colliders[i].radius * colliders[i].transform.localScale.x);
-        }
-
-        // Fill the buffer with force data
-        forceData = new float[numPoints];
-        for (int i = 0; i < numPoints; i++)
-        {
-            forceData[i] = 0.0f;
-        }
-
-        // Fill the buffer with model matrix
-        grassModelMatrices = new Matrix4x4[numPoints];
-        for (int i = 0; i < numPoints; i++)
-        {
-            grassModelMatrices[i] = gameObject.transform.GetChild(i).localToWorldMatrix;
         }
 
         // Setup buffers

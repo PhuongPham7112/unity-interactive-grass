@@ -4130,10 +4130,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb5e5de979c17a44ea6d02d390252760, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  grassMaterial: {fileID: 2100000, guid: cd63551094f14344688ac8f89d759468, type: 2}
+  grassPhysicsCS: {fileID: 7200000, guid: 57a93311cc60ea846b8554ff7ac26376, type: 3}
+  grassCulling: {fileID: 7200000, guid: 792a9a8bd00d4a74785f7fd6bac04f31, type: 3}
   colliders:
   - {fileID: 762258768}
-  grassPhysicsCS: {fileID: 7200000, guid: 57a93311cc60ea846b8554ff7ac26376, type: 3}
-  grassMaterial: {fileID: 2100000, guid: cd63551094f14344688ac8f89d759468, type: 2}
   collisionDecreaseAmount: 2
   stiffnessCoefficient: 0.2
   grassMass: 0.1
