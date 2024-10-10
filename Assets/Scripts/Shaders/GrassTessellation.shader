@@ -30,6 +30,7 @@ Shader "Custom/GrassTessellation"
             #include "UnityIndirect.cginc"
 
             int _Index;
+            int _IndexTotal;
             float3 _BezierControlV0;
             float3 _BezierControlV1;
             float3 _BezierControlV2;
@@ -39,6 +40,7 @@ Shader "Custom/GrassTessellation"
             float2 _Dimension;
             StructuredBuffer<float4> _V1Buffer;
             StructuredBuffer<float4> _V2Buffer;
+            StructuredBuffer<float4x4> _ObjectToWorld;
 
             #define BARYCENTRIC_INTERPOLATE(fieldName) \
                     patch[0].fieldName * barycentricCoordinates.x + \
@@ -76,8 +78,14 @@ Shader "Custom/GrassTessellation"
 
 
             // vertex shader
-            TSControlPoint vert(appdata_full i)
+            TSControlPoint vert(appdata_full i, uint svInstanceID : SV_InstanceID)
             {
+                // setup the ID access functions
+                InitIndirectDrawArgs(0);
+                uint cmdID = GetCommandID(0);
+                uint instanceID = GetIndirectInstanceID(svInstanceID);
+                _Index = instanceID + _IndexTotal;
+
                 float u = i.texcoord.x;
                 float v = i.texcoord.y;
 
@@ -93,9 +101,8 @@ Shader "Custom/GrassTessellation"
 
                 // coordinate systems
                 float3 tangent = normalize(b - a);
-                float3 up = float3(0, 1, 0);
                 float3 binormal = float3(1, 0, 0);
-                float3 normal = normalize(cross(binormal, tangent)); // should be provided
+                float3 normal = normalize(cross(float3(1, 0, 0), tangent)); // should be provided
                 
                 // final vertex position
                 float3 c_0 = c - _Dimension.x * binormal;
@@ -104,7 +111,7 @@ Shader "Custom/GrassTessellation"
                 
                 // output
                 TSControlPoint tc;
-                tc.positionWS = mul(unity_ObjectToWorld, float4(vert, 1.0)).xyz;
+                tc.positionWS = mul(_ObjectToWorld[_Index], float4(vert, 1.0)).xyz;
                 tc.color = float4(v, v, v, 1);
                 tc.normalWS = UnityObjectToWorldNormal(normal);
                 tc.tangentWS = UnityObjectToWorldNormal(tangent);

@@ -18,11 +18,10 @@ float4 gravityDirection;
 // buffers
 int numColliders;
 StructuredBuffer<float4> colliders;
-StructuredBuffer<float4x4> modelMatrix;
+StructuredBuffer<float4x4> grassParentMatrix;
 RWStructuredBuffer<float> forceBuffer; // collision force data
 RWStructuredBuffer<float4> v1Positions; // v1 buffer + original width
 RWStructuredBuffer<float4> v2Positions; // v2 buffer + original length
-RWStructuredBuffer<float3> groundPositions; // world ground position
 
 float B(float2 v0, float2 v1, float2 v2, float t)
 {
@@ -94,7 +93,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     //direction of the blade of grass
     float3 up = float3(0, 1, 0);
     float3 right = float3(1, 0, 0);
-    float3 groundPos = mul(modelMatrix[id.x], float4(vertex0, 1.0f)).xyz;
+    float3 groundPos = mul(grassParentMatrix[id.x], float4(vertex0, 1.0f)).xyz;
     
     // collision force
     int isCollided = 0;
@@ -108,8 +107,8 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             if (dist > 0.01f && dist < originalLength)
             {
                 // TODO: convert to world space correctly
-                float3 v1PositionsWorld = mul(modelMatrix[id.x], float4(vertex1, 1.0f)).xyz;
-                float3 v2PositionsWorld = mul(modelMatrix[id.x], float4(vertex2, 1.0f)).xyz;
+                float3 v1PositionsWorld = mul(grassParentMatrix[id.x], float4(vertex1, 1.0f)).xyz;
+                float3 v2PositionsWorld = mul(grassParentMatrix[id.x], float4(vertex2, 1.0f)).xyz;
                 float3 midCurvePoint = 0.25f * groundPos + 0.5f * v1PositionsWorld + 0.25f * v2PositionsWorld;
         
                 // Case 1: v2 in sphere => move v2 to the nearest border
