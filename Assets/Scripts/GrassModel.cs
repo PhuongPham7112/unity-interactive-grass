@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class GrassModel : MonoBehaviour
 {
+    #region GRASS_PHYSICS
     private int kernelIndex;
     private float[] forceData;
     private Vector4[] collidersData; // colliders position + extent
@@ -17,6 +18,7 @@ public class GrassModel : MonoBehaviour
     private ComputeBuffer grass1PosBuffer;
     private ComputeBuffer grass2PosBuffer;
     
+    [SerializeField] private GameObject grassPrefab;
     [SerializeField] private Material grassMaterial;
     [SerializeField] private ComputeShader grassPhysicsCS;
     [SerializeField] private ComputeShader grassCulling;
@@ -29,12 +31,21 @@ public class GrassModel : MonoBehaviour
     [SerializeField] public float grassHeight = 1.0f;
     [SerializeField] private int numPoints;
     [SerializeField] private int numColliders;
-
     private MaterialPropertyBlock propertyBlock;
+    #endregion
+
+    #region GRASS_CULLING
+    Mesh grassMesh;
+    GraphicsBuffer commandBuf;
+    GraphicsBuffer.IndirectDrawIndexedArgs[] commandData;
+    const int commandCount = 2;
+    #endregion
+
 
     // Start is called before the first frame update
     void Start()
     {
+        grassMesh = grassPrefab.GetComponent<Mesh>();
         propertyBlock = new MaterialPropertyBlock();
         kernelIndex = grassPhysicsCS.FindKernel("CSMain");
 
@@ -110,7 +121,6 @@ public class GrassModel : MonoBehaviour
         collidersBuffer.SetData(collidersData);
         grassPhysicsCS.SetBuffer(kernelIndex, "colliders", collidersBuffer);
         grassPhysicsCS.SetFloat("time", Time.time);
-        grassPhysicsCS.SetMatrix("worldToLocalMatrix", transform.worldToLocalMatrix);
         grassPhysicsCS.Dispatch(kernelIndex, numPoints / 8, 1, 1);
 
         // Set unique properties per object
