@@ -4134,11 +4134,11 @@ MonoBehaviour:
   - {fileID: 762258768}
   grassPhysicsCS: {fileID: 7200000, guid: 57a93311cc60ea846b8554ff7ac26376, type: 3}
   grassMaterial: {fileID: 2100000, guid: cd63551094f14344688ac8f89d759468, type: 2}
-  collisionDecreaseAmount: 10
+  collisionDecreaseAmount: 1
   stiffnessCoefficient: 0.2
   grassMass: 0.1
   grassWidth: 1
-  grassHeight: 1
+  grassHeight: 2
   numPoints: 0
   numColliders: 0
 --- !u!1001 &1175206222
