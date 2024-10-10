@@ -9,11 +9,11 @@ public class GrassModel : MonoBehaviour
     private Vector4[] collidersData; // colliders position + extent
     private Vector4[] grassV1Positions; // v1 xyz + grass height
     private Vector4[] grassV2Positions; // v2 xyz + grass width
-    private Vector3[] grassGroundPositions; // v2 xyz + grass width
-    
+    private Matrix4x4[] grassModelMatrices;
+
     private ComputeBuffer forceBuffer;
+    private ComputeBuffer modelMatrixBuffer;
     private ComputeBuffer collidersBuffer;
-    private ComputeBuffer groundPosBuffer;
     private ComputeBuffer grass1PosBuffer;
     private ComputeBuffer grass2PosBuffer;
     
@@ -42,12 +42,10 @@ public class GrassModel : MonoBehaviour
         numColliders = colliders.Length;
 
         // Fill the buffer with the v2 positions of the child objects
-        grassGroundPositions = new Vector3[numPoints];
         grassV1Positions = new Vector4[numPoints];
         grassV2Positions = new Vector4[numPoints];
         for (int i = 0; i < numPoints; i++)
         {
-            grassGroundPositions[i] = gameObject.transform.GetChild(i).position;
             grassV1Positions[i] = new Vector4(0, grassHeight * 0.5f, Mathf.Epsilon, grassHeight);
             grassV2Positions[i] = new Vector4(0, grassHeight, Mathf.Epsilon, grassWidth);
         }
@@ -63,31 +61,38 @@ public class GrassModel : MonoBehaviour
         }
 
         // Fill the buffer with force data
-        forceData = new float[numPoints * numPoints];
-        for (int i = 0; i < numPoints * numPoints; i++)
+        forceData = new float[numPoints];
+        for (int i = 0; i < numPoints; i++)
         {
             forceData[i] = 0.0f;
         }
 
+        // Fill the buffer with model matrix
+        grassModelMatrices = new Matrix4x4[numPoints];
+        for (int i = 0; i < numPoints; i++)
+        {
+            grassModelMatrices[i] = gameObject.transform.GetChild(i).localToWorldMatrix;
+        }
+
         // Setup buffers
-        forceBuffer = new ComputeBuffer(numPoints * numPoints, sizeof(float));
+        forceBuffer = new ComputeBuffer(numPoints, sizeof(float));
         collidersBuffer = new ComputeBuffer(numColliders, sizeof(float) * 4);
-        groundPosBuffer = new ComputeBuffer(numPoints, sizeof(float) * 3);
         grass1PosBuffer = new ComputeBuffer(numPoints, sizeof(float) * 4);
         grass2PosBuffer = new ComputeBuffer(numPoints, sizeof(float) * 4);
+        modelMatrixBuffer = new ComputeBuffer(numPoints, sizeof(float) * 16);
 
         forceBuffer.SetData(forceData);
         collidersBuffer.SetData(collidersData);
-        groundPosBuffer.SetData(grassGroundPositions);
         grass1PosBuffer.SetData(grassV1Positions);
         grass2PosBuffer.SetData(grassV2Positions);
+        modelMatrixBuffer.SetData(grassModelMatrices);
 
         // Set buffers
         grassPhysicsCS.SetBuffer(kernelIndex, "forceBuffer", forceBuffer);
         grassPhysicsCS.SetBuffer(kernelIndex, "colliders", collidersBuffer);
         grassPhysicsCS.SetBuffer(kernelIndex, "v1Positions", grass1PosBuffer);
         grassPhysicsCS.SetBuffer(kernelIndex, "v2Positions", grass2PosBuffer);
-        grassPhysicsCS.SetBuffer(kernelIndex, "groundPositions", groundPosBuffer);
+        grassPhysicsCS.SetBuffer(kernelIndex, "modelMatrix", modelMatrixBuffer);
 
         // Setup properties
         grassPhysicsCS.SetFloat("deltaTime", Time.deltaTime);
@@ -136,8 +141,8 @@ public class GrassModel : MonoBehaviour
     {
         forceBuffer?.Release();
         collidersBuffer?.Release();
-        groundPosBuffer?.Release();
         grass1PosBuffer?.Release();
         grass2PosBuffer?.Release();
+        modelMatrixBuffer?.Release();
     }
 }

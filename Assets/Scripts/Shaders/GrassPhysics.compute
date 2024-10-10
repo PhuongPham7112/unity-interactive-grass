@@ -19,6 +19,7 @@ float4 gravityDirection;
 // buffers
 int numColliders;
 StructuredBuffer<float4> colliders;
+StructuredBuffer<float4x4> modelMatrix;
 RWStructuredBuffer<float> forceBuffer; // collision force data
 RWStructuredBuffer<float4> v1Positions; // v1 buffer + original width
 RWStructuredBuffer<float4> v2Positions; // v2 buffer + original length
@@ -94,6 +95,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     //direction of the blade of grass
     float3 up = float3(0, 1, 0);
     float3 right = float3(1, 0, 0);
+    float3 groundPos = mul(modelMatrix[id.x], float4(vertex0, 1.0f)).xyz;
     
     // collision force
     int isCollided = 0;
@@ -103,13 +105,13 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         {
             float3 colliderPos = colliders[i].xyz;
             float colliderRadius = colliders[i].w;
-            float dist = distance(groundPositions[id.x], colliderPos) - colliderRadius;
+            float dist = distance(groundPos, colliderPos) - colliderRadius;
             if (dist > 0.01f && dist < originalLength)
             {
                 // TODO: convert to world space correctly
-                float3 v1PositionsWorld = groundPositions[id.x] + (vertex1 - vertex0);
-                float3 v2PositionsWorld = groundPositions[id.x] + (vertex2 - vertex0);
-                float3 midCurvePoint = 0.25f * groundPositions[id.x] + 0.5f * v1PositionsWorld + 0.25f * v2PositionsWorld;
+                float3 v1PositionsWorld = mul(modelMatrix[id.x], float4(vertex1, 1.0f)).xyz;
+                float3 v2PositionsWorld = mul(modelMatrix[id.x], float4(vertex2, 1.0f)).xyz;
+                float3 midCurvePoint = 0.25f * groundPos + 0.5f * v1PositionsWorld + 0.25f * v2PositionsWorld;
         
                 // Case 1: v2 in sphere => move v2 to the nearest border
                 float distV2 = length(colliderPos - v2PositionsWorld) - colliderRadius;
@@ -138,7 +140,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     // natural forces
     {
         // wind force: computed by using analytic functions
-        float3 w = WindForce(groundPositions[id.x], vertex0, vertex2, up, originalLength);
+        float3 w = WindForce(groundPos, vertex0, vertex2, up, originalLength);
         
         // gravity force
         float3 front = normalize(cross(right, vertex2 - vertex0));
