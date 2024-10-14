@@ -38,6 +38,7 @@ Shader "Custom/GrassTessellation"
             float4 _Color;
             float _InsideFactor;
             float2 _Dimension;
+            StructuredBuffer<int> _VisibleIndex;
             StructuredBuffer<float4> _V1Buffer;
             StructuredBuffer<float4> _V2Buffer;
             StructuredBuffer<float4x4> _ObjectToWorld;
