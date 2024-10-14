@@ -1,14 +1,18 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public class GrassModel : MonoBehaviour
 {
     #region GRASS_PHYSICS_PARAMS
     private int kernelIndex;
     private int cullingKernelIndex;
+    
     private float[] forceData;
     private int[] visibilityData;
+    private int[] visibilityCounterData;
     private Vector4[] collidersData; // colliders position + extent
     private Vector4[] grassV1Positions; // v1 xyz + grass height
     private Vector4[] grassV2Positions; // v2 xyz + grass width
@@ -20,6 +24,7 @@ public class GrassModel : MonoBehaviour
     private ComputeBuffer grass2PosBuffer;
     private ComputeBuffer grassMatrixBuffer;
     private ComputeBuffer visibleGrassBuffer;
+    private ComputeBuffer visibleGrassCounterBuffer;
     
     [SerializeField] private GameObject grassPrefab;
     [SerializeField] private Material grassMaterial;
@@ -64,6 +69,8 @@ public class GrassModel : MonoBehaviour
 
         #region SIMULATION_SETUP
         // Fill the buffer with the v2 positions of the child objects
+        visibilityCounterData = new int[1];
+        visibilityCounterData[0] = numPoints;
         visibilityData = new int[numPoints];
         grassV1Positions = new Vector4[numPoints];
         grassV2Positions = new Vector4[numPoints];
@@ -95,6 +102,7 @@ public class GrassModel : MonoBehaviour
         grass2PosBuffer = new ComputeBuffer(numPoints, sizeof(float) * 4);
         grassMatrixBuffer = new ComputeBuffer(numPoints, sizeof(float) * 16);
         visibleGrassBuffer = new ComputeBuffer(numPoints, sizeof(int));
+        visibleGrassCounterBuffer = new ComputeBuffer(1, sizeof(int));
 
         forceBuffer.SetData(forceData);
         collidersBuffer.SetData(collidersData);
@@ -102,6 +110,7 @@ public class GrassModel : MonoBehaviour
         grass2PosBuffer.SetData(grassV2Positions);
         grassMatrixBuffer.SetData(grassModelMatrices);
         visibleGrassBuffer.SetData(visibilityData);
+        visibleGrassCounterBuffer.SetData(visibilityCounterData);
 
         // Set buffers
         grassPhysicsCS.SetBuffer(kernelIndex, "forceBuffer", forceBuffer);
@@ -126,6 +135,8 @@ public class GrassModel : MonoBehaviour
         commandBuf = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments, commandCount, GraphicsBuffer.IndirectDrawIndexedArgs.size);
         commandData = new GraphicsBuffer.IndirectDrawIndexedArgs[commandCount];
         grassCullingCS.SetBuffer(cullingKernelIndex, "visibleGrass", visibleGrassBuffer);
+        grassCullingCS.SetBuffer(cullingKernelIndex, "visibleGrassCounter", visibleGrassCounterBuffer);
+        grassCullingCS.SetInt("totalVisible", 0);
         #endregion
 
         grassMaterial.SetBuffer("_VisibleIndex", visibleGrassBuffer);
@@ -166,10 +177,8 @@ public class GrassModel : MonoBehaviour
         #endregion
 
         #region RENDERING_GRASS
-        
-        grassMaterial.SetInteger("_IndexTotal", (int)(numPoints * 0.5f));
         commandData[0].indexCountPerInstance = grassMesh.GetIndexCount(0); // The number of vertex indices per instance.
-        commandData[0].instanceCount = (uint)(numPoints * 0.5f); // The number of instances to render.
+        commandData[0].instanceCount = (uint)(visibilityCounterData[0]); // The number of instances to render.
         commandBuf.SetData(commandData);
         Graphics.RenderMeshIndirect(rp, grassMesh, commandBuf, commandCount);
         #endregion
@@ -183,6 +192,7 @@ public class GrassModel : MonoBehaviour
         grass2PosBuffer?.Release();
         grassMatrixBuffer?.Release();
         visibleGrassBuffer?.Release();
+        visibleGrassCounterBuffer?.Release();
         commandBuf?.Release();
         commandBuf = null;
     }

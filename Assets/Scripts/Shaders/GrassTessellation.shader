@@ -30,7 +30,6 @@ Shader "Custom/GrassTessellation"
             #include "UnityIndirect.cginc"
 
             int _Index;
-            int _IndexTotal;
             float3 _BezierControlV0;
             float3 _BezierControlV1;
             float3 _BezierControlV2;
@@ -85,7 +84,7 @@ Shader "Custom/GrassTessellation"
                 InitIndirectDrawArgs(0);
                 uint cmdID = GetCommandID(0);
                 uint instanceID = GetIndirectInstanceID(svInstanceID);
-                _Index = instanceID + _IndexTotal;
+                _Index = _VisibleIndex[instanceID];
 
                 float u = i.texcoord.x;
                 float v = i.texcoord.y;
