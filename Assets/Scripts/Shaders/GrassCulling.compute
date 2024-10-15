@@ -2,12 +2,12 @@
 #pragma kernel CSMain
 
 RWStructuredBuffer<int> visibleGrass;
-RWStructuredBuffer<int> visibleGrassCounter;
+RWStructuredBuffer<uint> visibleGrassCounter;
+RWStructuredBuffer<uint> indirectArgsBuffer;
 
 // https://docs.unity3d.com/ScriptReference/Graphics.RenderMeshIndirect.html
 [numthreads(64, 1, 1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    // TODO: insert actual code here!
-    InterlockedAdd(visibleGrassCounter[0], 1);
+	InterlockedAdd(visibleGrassCounter[0], 1);
 }
