@@ -1,8 +1,9 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
 
-RWStructuredBuffer<int> visibleGrass;
-RWStructuredBuffer<uint> visibleGrassCounter;
+StructuredBuffer<int> indexGrass;
+RWStructuredBuffer<int> visibleIndexGrass;
+RWStructuredBuffer<uint> visibleGrassCounterBuffer;
 RWStructuredBuffer<float4> v1Positions; // v1 buffer + original width
 RWStructuredBuffer<float4> v2Positions; // v2 buffer + original length
 StructuredBuffer<float4x4> grassWorldMatrix;
@@ -11,13 +12,18 @@ StructuredBuffer<float4x4> grassWorldMatrix;
 [numthreads(64, 1, 1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-	float3 groundPos = mul(grassWorldMatrix[id.x], float4(0, 0, 0, 1.0f)).xyz;
-	if (groundPos.x < -2.0f)
+	// Ensure we only process valid points (TODO: no magic number)
+	if (id.x < 121)
 	{
+		// dummy cull
+		float3 groundPos = mul(grassWorldMatrix[id.x], float4(0, 0, 0, 1.0f)).xyz;
+		if (groundPos.x < 0.0f)
+		{
+			return;
+		}
 		uint val;
-		// Increase
-		InterlockedAdd(visibleGrassCounter[0], 1, val);
-		// Chang visible grass index list
-		//visibleGrass[val] = id.x;
+		InterlockedAdd(visibleGrassCounterBuffer[0], 1, val);
+		visibleIndexGrass[val] = id.x;
 	}
+	
 }

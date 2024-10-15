@@ -2,11 +2,13 @@
 #pragma kernel CSMain
 
 RWStructuredBuffer<uint> indirectArgsBuffer;
-RWStructuredBuffer<uint> visibleGrassCounter;
+RWStructuredBuffer<uint> visibleGrassCounterBuffer;
 
 [numthreads(1, 1, 1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    indirectArgsBuffer[1] = visibleGrassCounter[0]; // transfer
-    visibleGrassCounter[0] = 0; // reset after
+    //InterlockedExchange(indirectArgsBuffer[1], visibleGrassCounterBuffer[0]);
+    indirectArgsBuffer[1] = visibleGrassCounterBuffer[0]; // transfer
+    visibleGrassCounterBuffer[0] = 0;
+    //InterlockedExchange(visibleGrassCounterBuffer[0], 0); // reset counter
 }

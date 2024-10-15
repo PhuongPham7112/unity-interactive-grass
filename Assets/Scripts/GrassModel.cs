@@ -24,7 +24,7 @@ public class GrassModel : MonoBehaviour
     private ComputeBuffer grass1PosBuffer;
     private ComputeBuffer grass2PosBuffer;
     private ComputeBuffer grassMatrixBuffer;
-    private ComputeBuffer visibleGrassBuffer;
+    private ComputeBuffer visibleIndexGrassBuffer;
     private ComputeBuffer visibleGrassCounterBuffer;
 
     [SerializeField] private GameObject grassPrefab;
@@ -74,7 +74,7 @@ public class GrassModel : MonoBehaviour
         #region SIMULATION_SETUP
         // Fill the buffer with the v2 positions of the child objects
         visibilityCounterData = new uint[1];
-        visibilityCounterData[0] = 0;
+        visibilityCounterData[0] = (uint)numPoints;
         visibilityData = new int[numPoints];
 
         forceData = new float[numPoints]; // Fill the buffer with force data
@@ -108,7 +108,7 @@ public class GrassModel : MonoBehaviour
         grass1PosBuffer = new ComputeBuffer(numPoints, sizeof(float) * 4);
         grass2PosBuffer = new ComputeBuffer(numPoints, sizeof(float) * 4);
         grassMatrixBuffer = new ComputeBuffer(numPoints, sizeof(float) * 16);
-        visibleGrassBuffer = new ComputeBuffer(numPoints, sizeof(int));
+        visibleIndexGrassBuffer = new ComputeBuffer(numPoints, sizeof(int));
         visibleGrassCounterBuffer = new ComputeBuffer(1, sizeof(uint));
 
         forceBuffer.SetData(forceData);
@@ -116,7 +116,7 @@ public class GrassModel : MonoBehaviour
         grass1PosBuffer.SetData(grassV1Positions);
         grass2PosBuffer.SetData(grassV2Positions);
         grassMatrixBuffer.SetData(grassModelMatrices);
-        visibleGrassBuffer.SetData(visibilityData);
+        visibleIndexGrassBuffer.SetData(visibilityData);
         visibleGrassCounterBuffer.SetData(visibilityCounterData);
 
         // Set buffers
@@ -146,19 +146,20 @@ public class GrassModel : MonoBehaviour
         commandData[0].instanceCount = (visibilityCounterData[0]); // The number of instances to render.
         commandBuf.SetData(commandData);
 
-        grassCullingCS.SetBuffer(cullingKernelIndex, "grassWorldMatrix", grassMatrixBuffer);
         grassCullingCS.SetBuffer(cullingKernelIndex, "v1Positions", grass1PosBuffer);
         grassCullingCS.SetBuffer(cullingKernelIndex, "v2Positions", grass2PosBuffer);
-        grassCullingCS.SetBuffer(cullingKernelIndex, "visibleGrass", visibleGrassBuffer);
-        grassCullingCS.SetBuffer(cullingKernelIndex, "visibleGrassCounter", visibleGrassCounterBuffer);
+        grassCullingCS.SetBuffer(cullingKernelIndex, "grassWorldMatrix", grassMatrixBuffer);
+        grassCullingCS.SetBuffer(cullingKernelIndex, "indexGrass", visibleIndexGrassBuffer);
+        grassCullingCS.SetBuffer(cullingKernelIndex, "visibleIndexGrass", visibleIndexGrassBuffer);
+        grassCullingCS.SetBuffer(cullingKernelIndex, "visibleGrassCounterBuffer", visibleGrassCounterBuffer);
         
         grassIndirectArgsCS.SetBuffer(argsKernelIndex, "indirectArgsBuffer", commandBuf);
-        grassIndirectArgsCS.SetBuffer(argsKernelIndex, "visibleGrassCounter", visibleGrassCounterBuffer);
+        grassIndirectArgsCS.SetBuffer(argsKernelIndex, "visibleGrassCounterBuffer", visibleGrassCounterBuffer);
         #endregion
 
         grassMaterial.SetBuffer("_V1Buffer", grass1PosBuffer);
         grassMaterial.SetBuffer("_V2Buffer", grass2PosBuffer);
-        grassMaterial.SetBuffer("_VisibleIndex", visibleGrassBuffer);
+        grassMaterial.SetBuffer("_VisibleIndex", visibleIndexGrassBuffer);
         grassMaterial.SetBuffer("_ObjectToWorld", grassMatrixBuffer);
     }
 
@@ -191,12 +192,36 @@ public class GrassModel : MonoBehaviour
 
         #region CULLING_GRASS
         grassCullingCS.Dispatch(cullingKernelIndex, numPoints / 8, 1, 1);
+        AsyncGPUReadback.Request(visibleGrassCounterBuffer, OnCompleteReadback);
         #endregion
 
         #region RENDERING_GRASS
+        // Request the readback
         grassIndirectArgsCS.Dispatch(argsKernelIndex, 1, 1, 1);
         Graphics.RenderMeshIndirect(rp, grassMesh, commandBuf, commandCount);
         #endregion
+    }
+
+    void OnCompleteReadback(AsyncGPUReadbackRequest request)
+    {
+        if (request.hasError)
+        {
+            Debug.Log("GPU readback error detected.");
+            return;
+        }
+
+        // Get the data from the request
+        Unity.Collections.NativeArray<uint> data = request.GetData<uint>();
+
+        // Now you can use the data on the CPU
+        // For example, print the first element:
+        if (data.Length > 0)
+        {
+            Debug.Log("First element: " + data[0]);
+        }
+
+        // Remember to dispose of the NativeArray when you're done with it
+        data.Dispose();
     }
 
     void OnDestroy()
@@ -209,7 +234,7 @@ public class GrassModel : MonoBehaviour
         grass1PosBuffer?.Release();
         grass2PosBuffer?.Release();
         grassMatrixBuffer?.Release();
-        visibleGrassBuffer?.Release();
+        visibleIndexGrassBuffer?.Release();
         visibleGrassCounterBuffer?.Release();
     }
 }
