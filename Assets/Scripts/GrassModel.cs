@@ -7,7 +7,7 @@ using UnityEngine.Rendering;
 public class GrassModel : MonoBehaviour
 {
     #region GRASS_PHYSICS_PARAMS
-    private int kernelIndex;
+    private int physicsKernelIndex;
     private int cullingKernelIndex;
     
     private float[] forceData;
@@ -31,6 +31,7 @@ public class GrassModel : MonoBehaviour
     [SerializeField] private Material grassMaterial;
     [SerializeField] private ComputeShader grassPhysicsCS;
     [SerializeField] private ComputeShader grassCullingCS;
+    [SerializeField] private ComputeShader grassIndirectArgsCS;
     [SerializeField] public SphereCollider[] colliders;
     
     [SerializeField] public float collisionDecreaseAmount = 0.5f;
@@ -61,8 +62,10 @@ public class GrassModel : MonoBehaviour
             worldBounds = new Bounds(Vector3.zero, 10000 * Vector3.one) // use tighter bounds for better FOV culling
         };
         propertyBlock = new MaterialPropertyBlock();
-        kernelIndex = grassPhysicsCS.FindKernel("CSMain");
+        physicsKernelIndex = grassPhysicsCS.FindKernel("CSMain");
         cullingKernelIndex = grassCullingCS.FindKernel("CSMain");
+
+        int argsKernelIndex = grassIndirectArgsCS.FindKernel("CSMain");
 
         // Get number of child objects
         numPoints = gameObject.transform.childCount;
@@ -115,13 +118,13 @@ public class GrassModel : MonoBehaviour
         visibleGrassCounterBuffer.SetData(visibilityCounterData);
 
         // Set buffers
-        grassPhysicsCS.SetBuffer(kernelIndex, "forceBuffer", forceBuffer);
-        grassPhysicsCS.SetBuffer(kernelIndex, "colliders", collidersBuffer);
-        grassPhysicsCS.SetBuffer(kernelIndex, "v1Positions", grass1PosBuffer);
-        grassPhysicsCS.SetBuffer(kernelIndex, "v2Positions", grass2PosBuffer);
+        grassPhysicsCS.SetBuffer(physicsKernelIndex, "forceBuffer", forceBuffer);
+        grassPhysicsCS.SetBuffer(physicsKernelIndex, "colliders", collidersBuffer);
+        grassPhysicsCS.SetBuffer(physicsKernelIndex, "v1Positions", grass1PosBuffer);
+        grassPhysicsCS.SetBuffer(physicsKernelIndex, "v2Positions", grass2PosBuffer);
         grassMaterial.SetBuffer("_V1Buffer", grass1PosBuffer);
         grassMaterial.SetBuffer("_V2Buffer", grass2PosBuffer);
-        grassPhysicsCS.SetBuffer(kernelIndex, "grassWorldMatrix", grassMatrixBuffer);
+        grassPhysicsCS.SetBuffer(physicsKernelIndex, "grassWorldMatrix", grassMatrixBuffer);
 
         // Setup properties
         grassPhysicsCS.SetFloat("numColliders", numColliders);
@@ -138,6 +141,8 @@ public class GrassModel : MonoBehaviour
         commandData = new GraphicsBuffer.IndirectDrawIndexedArgs[commandCount];
         grassCullingCS.SetBuffer(cullingKernelIndex, "visibleGrass", visibleGrassBuffer);
         grassCullingCS.SetBuffer(cullingKernelIndex, "visibleGrassCounter", visibleGrassCounterBuffer);
+        grassIndirectArgsCS.SetBuffer(argsKernelIndex, "visibleGrassCounter", visibleGrassCounterBuffer);
+        grassIndirectArgsCS.SetBuffer(argsKernelIndex, "indirectArgsBuffer", commandBuf);
         grassCullingCS.SetInt("totalVisible", 0);
         #endregion
 
@@ -159,8 +164,8 @@ public class GrassModel : MonoBehaviour
         }
         collidersBuffer.SetData(collidersData);
         grassPhysicsCS.SetFloat("time", Time.time);
-        grassPhysicsCS.SetBuffer(kernelIndex, "colliders", collidersBuffer);
-        grassPhysicsCS.Dispatch(kernelIndex, numPoints / 8, 1, 1);
+        grassPhysicsCS.SetBuffer(physicsKernelIndex, "colliders", collidersBuffer);
+        grassPhysicsCS.Dispatch(physicsKernelIndex, numPoints / 8, 1, 1);
 
         // Set unique properties per object
         for (int i = 0; i < numPoints; i++)

@@ -1,22 +1,11 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
 
-RWStructuredBuffer<int> visibleGrass;
+RWStructuredBuffer<uint> indirectArgsBuffer;
 RWStructuredBuffer<int> visibleGrassCounter;
 
-struct IndirectStruct
-{
-	uint indexCountPerInstance;
-	uint instanceCount;
-	uint startIndex;
-	uint baseVertexIndex;
-	uint startInstance;
-};
-
-// https://docs.unity3d.com/ScriptReference/Graphics.RenderMeshIndirect.html
-[numthreads(64, 1, 1)]
+[numthreads(1, 1, 1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    // TODO: insert actual code here!
-    InterlockedAdd(visibleGrassCounter[0], 1);
+    indirectArgsBuffer[1] = visibleGrassCounter[0];
 }

@@ -4,15 +4,6 @@
 RWStructuredBuffer<int> visibleGrass;
 RWStructuredBuffer<int> visibleGrassCounter;
 
-struct IndirectStruct
-{
-	uint indexCountPerInstance;
-	uint instanceCount;
-	uint startIndex;
-	uint baseVertexIndex;
-	uint startInstance;
-};
-
 // https://docs.unity3d.com/ScriptReference/Graphics.RenderMeshIndirect.html
 [numthreads(64, 1, 1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
