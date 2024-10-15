@@ -25,7 +25,8 @@ public class GrassModel : MonoBehaviour
     private ComputeBuffer grassMatrixBuffer;
     private ComputeBuffer visibleGrassBuffer;
     private ComputeBuffer visibleGrassCounterBuffer;
-    
+    private ComputeBuffer indirectArgsBuffer;
+
     [SerializeField] private GameObject grassPrefab;
     [SerializeField] private Material grassMaterial;
     [SerializeField] private ComputeShader grassPhysicsCS;
@@ -70,7 +71,7 @@ public class GrassModel : MonoBehaviour
         #region SIMULATION_SETUP
         // Fill the buffer with the v2 positions of the child objects
         visibilityCounterData = new int[1];
-        visibilityCounterData[0] = numPoints;
+        visibilityCounterData[0] = 0;
         visibilityData = new int[numPoints];
         grassV1Positions = new Vector4[numPoints];
         grassV2Positions = new Vector4[numPoints];
@@ -103,6 +104,7 @@ public class GrassModel : MonoBehaviour
         grassMatrixBuffer = new ComputeBuffer(numPoints, sizeof(float) * 16);
         visibleGrassBuffer = new ComputeBuffer(numPoints, sizeof(int));
         visibleGrassCounterBuffer = new ComputeBuffer(1, sizeof(int));
+        indirectArgsBuffer = new ComputeBuffer(4, sizeof(uint), ComputeBufferType.IndirectArguments);
 
         forceBuffer.SetData(forceData);
         collidersBuffer.SetData(collidersData);
@@ -186,14 +188,16 @@ public class GrassModel : MonoBehaviour
 
     void OnDestroy()
     {
+        commandBuf?.Release();
+        commandBuf = null;
+
         forceBuffer?.Release();
         collidersBuffer?.Release();
         grass1PosBuffer?.Release();
         grass2PosBuffer?.Release();
         grassMatrixBuffer?.Release();
         visibleGrassBuffer?.Release();
+        indirectArgsBuffer?.Release();
         visibleGrassCounterBuffer?.Release();
-        commandBuf?.Release();
-        commandBuf = null;
     }
 }
