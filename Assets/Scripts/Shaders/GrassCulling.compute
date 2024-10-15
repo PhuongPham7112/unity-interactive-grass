@@ -3,11 +3,21 @@
 
 RWStructuredBuffer<int> visibleGrass;
 RWStructuredBuffer<uint> visibleGrassCounter;
-RWStructuredBuffer<uint> indirectArgsBuffer;
+RWStructuredBuffer<float4> v1Positions; // v1 buffer + original width
+RWStructuredBuffer<float4> v2Positions; // v2 buffer + original length
+StructuredBuffer<float4x4> grassWorldMatrix;
 
 // https://docs.unity3d.com/ScriptReference/Graphics.RenderMeshIndirect.html
 [numthreads(64, 1, 1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-	InterlockedAdd(visibleGrassCounter[0], 1);
+	float3 groundPos = mul(grassWorldMatrix[id.x], float4(0, 0, 0, 1.0f)).xyz;
+	if (groundPos.x < -2.0f)
+	{
+		uint val;
+		// Increase
+		InterlockedAdd(visibleGrassCounter[0], 1, val);
+		// Chang visible grass index list
+		//visibleGrass[val] = id.x;
+	}
 }

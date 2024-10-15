@@ -146,6 +146,9 @@ public class GrassModel : MonoBehaviour
         commandData[0].instanceCount = (visibilityCounterData[0]); // The number of instances to render.
         commandBuf.SetData(commandData);
 
+        grassCullingCS.SetBuffer(cullingKernelIndex, "grassWorldMatrix", grassMatrixBuffer);
+        grassCullingCS.SetBuffer(cullingKernelIndex, "v1Positions", grass1PosBuffer);
+        grassCullingCS.SetBuffer(cullingKernelIndex, "v2Positions", grass2PosBuffer);
         grassCullingCS.SetBuffer(cullingKernelIndex, "visibleGrass", visibleGrassBuffer);
         grassCullingCS.SetBuffer(cullingKernelIndex, "visibleGrassCounter", visibleGrassCounterBuffer);
         

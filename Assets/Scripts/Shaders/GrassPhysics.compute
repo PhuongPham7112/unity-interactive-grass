@@ -96,7 +96,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     float3 groundPos = mul(grassWorldMatrix[id.x], float4(vertex0, 1.0f)).xyz;
     
     // collision force
-    int isCollided = 0;
     {
         float3 d = float3(0, 0, 0);
         for (int i = 0; i < numColliders; i++)
@@ -106,30 +105,21 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             float dist = distance(groundPos, colliderPos) - colliderRadius;
             if (dist > 0.01f && dist < originalLength)
             {
-                // TODO: convert to world space correctly
                 float3 v1PositionsWorld = mul(grassWorldMatrix[id.x], float4(vertex1, 1.0f)).xyz;
                 float3 v2PositionsWorld = mul(grassWorldMatrix[id.x], float4(vertex2, 1.0f)).xyz;
                 float3 midCurvePoint = 0.25f * groundPos + 0.5f * v1PositionsWorld + 0.25f * v2PositionsWorld;
         
                 // Case 1: v2 in sphere => move v2 to the nearest border
                 float distV2 = length(colliderPos - v2PositionsWorld) - colliderRadius;
-                if (distV2 < 0.0f)
-                {
-                    isCollided = 1;
-                    float3 force = distV2 * (colliderPos - v2PositionsWorld) / (distV2 + colliderRadius);
-                    forceBuffer[id.x] += dot(force, force);
-                    d += force;
-                }
+                float3 force = min(0.0f, distV2) * (colliderPos - v2PositionsWorld) / (distV2 + colliderRadius);
+                forceBuffer[id.x] += dot(force, force);
+                d += force;
     
                 // Case 2: curve in sphere
                 float distMid = length(colliderPos - midCurvePoint) - colliderRadius;
-                if (distMid < 0.0f)
-                {
-                    isCollided = 1;
-                    float3 force = distMid * (colliderPos - midCurvePoint) / (distMid + colliderRadius);
-                    forceBuffer[id.x] += dot(force, force);
-                    d += force;
-                }
+                force = min(0.0f, distMid) * (colliderPos - midCurvePoint) / (distMid + colliderRadius);
+                forceBuffer[id.x] += dot(force, force);
+                d += force;
             }
         }
         vertex2 += d;
