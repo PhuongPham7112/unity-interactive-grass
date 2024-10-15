@@ -19,11 +19,11 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 		float3 groundPos = mul(grassWorldMatrix[id.x], float4(0, 0, 0, 1.0f)).xyz;
 		if (groundPos.x < 0.0f)
 		{
-			return;
+			return; // discard
 		}
 		uint val;
 		InterlockedAdd(visibleGrassCounterBuffer[0], 1, val);
-		visibleIndexGrass[val] = id.x;
+		visibleIndexGrass[val] = id.x; // keep track that this is a visible blade
 	}
 	
 }
