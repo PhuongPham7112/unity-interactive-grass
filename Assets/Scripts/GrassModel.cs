@@ -191,6 +191,8 @@ public class GrassModel : MonoBehaviour
         #endregion
 
         #region CULLING_GRASS
+        grassCullingCS.SetVector("cameraPos", Camera.main.transform.position + Camera.main.transform.forward);
+        grassCullingCS.SetVector("cameraForward", Camera.main.transform.forward);
         grassCullingCS.Dispatch(cullingKernelIndex, numPoints / 8, 1, 1);
         AsyncGPUReadback.Request(visibleGrassCounterBuffer, OnCompleteReadback);
         #endregion

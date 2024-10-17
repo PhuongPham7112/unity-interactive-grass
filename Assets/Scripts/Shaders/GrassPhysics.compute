@@ -2,18 +2,18 @@
 #pragma kernel CSMain
 
 // time updated var
-float time;
-float deltaTime;
+uniform float time;
+uniform float deltaTime;
 
 // user-provided physical model params
-float grassMass;
-float stiffnessCoefficient;
-float collisionDecreaseAmount;
+uniform float grassMass;
+uniform float stiffnessCoefficient;
+uniform float collisionDecreaseAmount;
 
 // gravity
-float gravityParam;
-float4 gravityPoint;
-float4 gravityDirection;
+uniform float gravityParam;
+uniform float4 gravityPoint;
+uniform float4 gravityDirection;
 
 // buffers
 int numColliders;
