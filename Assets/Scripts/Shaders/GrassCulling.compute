@@ -3,6 +3,8 @@
 
 uniform float3 cameraPos;
 uniform float3 cameraForward;
+uniform float4x4 viewProjectionMatrix;
+uniform float tolerance = 1.0f;
 
 StructuredBuffer<int> indexGrass;
 RWStructuredBuffer<int> visibleIndexGrass;
@@ -18,14 +20,17 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 	// Ensure we only process valid points (TODO: no magic number)
 	if (id.x < 121)
 	{
-		// dummy cull
-		float3 groundPos = mul(grassWorldMatrix[id.x], float4(0, 0, 0, 1.0f)).xyz;
-		float3 viewDir = (groundPos - cameraPos);
-		float viewDist = length(viewDir);
-		float3 normViewDir = viewDir / viewDist;
 		float3 bladeDir = mul(grassWorldMatrix[id.x], float4(1.0f, 0, 0, 0)).xyz;
 		float3 bladeUp = mul(grassWorldMatrix[id.x], float4(0, 1.0f, 0, 0)).xyz;
 
+		float3 groundPos = mul(grassWorldMatrix[id.x], float4(0, 0, 0, 1.0f)).xyz;
+		float3 v1PositionsWorld = mul(grassWorldMatrix[id.x], float4(v1Positions[id.x].xyz, 1.0f)).xyz;
+		float3 v2PositionsWorld = mul(grassWorldMatrix[id.x], float4(v2Positions[id.x].xyz, 1.0f)).xyz;
+		float3 midCurvePoint = 0.25f * groundPos + 0.5f * v1PositionsWorld + 0.25f * v2PositionsWorld; 
+		
+		float3 viewDir = (groundPos - cameraPos);
+		float viewDist = length(viewDir);
+		float3 normViewDir = viewDir / viewDist;
 		// Orientation
 		{
 			if (abs(dot(normViewDir, bladeDir)) > 0.98f)
@@ -34,14 +39,33 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
 		// View Frustum Culling
 		{
+			float4 clipPos = mul(viewProjectionMatrix, float4(groundPos, 1.0f));
+			float h = clipPos.w + tolerance;
+			bool groundInView = clipPos.x >= -h && clipPos.x <= h && 
+						clipPos.y >= -h && clipPos.y <= h && 
+						clipPos.z >= -h && clipPos.z <= h;
+
+			clipPos = mul(viewProjectionMatrix, float4(midCurvePoint, 1.0f));
+			h = clipPos.w + tolerance;
+			bool midInView = clipPos.x >= -h && clipPos.x <= h && 
+						clipPos.y >= -h && clipPos.y <= h && 
+						clipPos.z >= -h && clipPos.z <= h;
+
+			clipPos = mul(viewProjectionMatrix, float4(v2PositionsWorld, 1.0f));
+			h = clipPos.w + tolerance;
+			bool tipInView = clipPos.x >= -h && clipPos.x <= h && 
+						clipPos.y >= -h && clipPos.y <= h && 
+						clipPos.z >= -h && clipPos.z <= h;
+			
+			if (!groundInView && !midInView && !tipInView)
+				return; // discard
+		}
+		
+		// Distance test
+		{
 			// projected distance
 			float3 dProj = abs(viewDir - bladeUp * dot(viewDir, bladeUp));
 			float maxDist = 1000.0f;
-
-		}
-
-		// Distance test
-		{
 		}
 
 		// Occlusion test
