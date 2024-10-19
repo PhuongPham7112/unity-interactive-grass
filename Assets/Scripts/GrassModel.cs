@@ -6,6 +6,7 @@ using UnityEngine.Rendering;
 
 public class GrassModel : MonoBehaviour
 {
+
     #region GRASS_PHYSICS_PARAMS
     private int physicsKernelIndex;
     private int cullingKernelIndex;
@@ -27,6 +28,8 @@ public class GrassModel : MonoBehaviour
     private ComputeBuffer visibleIndexGrassBuffer;
     private ComputeBuffer visibleGrassCounterBuffer;
 
+    [SerializeField] private Texture depthTexture;
+    [SerializeField] private Camera cam;
     [SerializeField] private GameObject grassPrefab;
     [SerializeField] private Material grassMaterial;
     [SerializeField] private ComputeShader grassPhysicsCS;
@@ -56,6 +59,8 @@ public class GrassModel : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        cam = Camera.main;
+        cam.depthTextureMode = DepthTextureMode.Depth;
         physicsKernelIndex = grassPhysicsCS.FindKernel("CSMain");
         cullingKernelIndex = grassCullingCS.FindKernel("CSMain");
         argsKernelIndex = grassIndirectArgsCS.FindKernel("CSMain");
@@ -146,6 +151,7 @@ public class GrassModel : MonoBehaviour
         commandData[0].instanceCount = (visibilityCounterData[0]); // The number of instances to render.
         commandBuf.SetData(commandData);
 
+        grassCullingCS.SetVector("nearFar", new Vector2(cam.nearClipPlane, cam.farClipPlane));
         grassCullingCS.SetBuffer(cullingKernelIndex, "v1Positions", grass1PosBuffer);
         grassCullingCS.SetBuffer(cullingKernelIndex, "v2Positions", grass2PosBuffer);
         grassCullingCS.SetBuffer(cullingKernelIndex, "grassWorldMatrix", grassMatrixBuffer);
@@ -172,6 +178,12 @@ public class GrassModel : MonoBehaviour
             collidersData[i][0] = colliders[i].transform.position.x;
             collidersData[i][1] = colliders[i].transform.position.y;
             collidersData[i][2] = colliders[i].transform.position.z;
+
+            // distance to cam
+            float dist = Vector3.Distance(colliders[i].transform.position, cam.transform.position);
+            // remap dist to [near, far]
+            float remap = (dist - cam.nearClipPlane) / (cam.farClipPlane - cam.nearClipPlane);
+            Debug.Log(remap);
         }
         collidersBuffer.SetData(collidersData);
         grassPhysicsCS.SetFloat("time", Time.time);
@@ -191,9 +203,16 @@ public class GrassModel : MonoBehaviour
         #endregion
 
         #region CULLING_GRASS
-        grassCullingCS.SetMatrix("viewProjectionMatrix", Camera.main.projectionMatrix * Camera.main.worldToCameraMatrix);
-        grassCullingCS.SetVector("cameraPos", Camera.main.transform.position + Camera.main.transform.forward);
-        grassCullingCS.SetVector("cameraForward", Camera.main.transform.forward);
+        grassCullingCS.SetVector("cameraPos", cam.transform.position + cam.transform.forward);
+        grassCullingCS.SetVector("cameraForward", cam.transform.forward);
+        grassCullingCS.SetMatrix("viewMatrix", cam.worldToCameraMatrix);
+        grassCullingCS.SetMatrix("viewProjectionMatrix", cam.projectionMatrix * cam.worldToCameraMatrix);
+        
+        depthTexture = Shader.GetGlobalTexture("_CameraDepthTexture");
+        if (depthTexture)
+        {
+            grassCullingCS.SetTexture(cullingKernelIndex, "cameraDepthTexture", Shader.GetGlobalTexture("_CameraDepthTexture"));
+        }
         grassCullingCS.Dispatch(cullingKernelIndex, numPoints / 8, 1, 1);
         AsyncGPUReadback.Request(visibleGrassCounterBuffer, OnCompleteReadback);
         #endregion

@@ -1,10 +1,15 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
+#include "UnityCG.cginc"
 
+uniform int2 nearFar;
 uniform float3 cameraPos;
 uniform float3 cameraForward;
+uniform float4x4 viewMatrix;
 uniform float4x4 viewProjectionMatrix;
-uniform float tolerance = 1.0f;
+uniform float tolerance = 0.5f;
+SamplerState pointClampSampler;
+Texture2D<float4> cameraDepthTexture;
 
 StructuredBuffer<int> indexGrass;
 RWStructuredBuffer<int> visibleIndexGrass;
@@ -13,6 +18,24 @@ RWStructuredBuffer<float4> v1Positions; // v1 buffer + original width
 RWStructuredBuffer<float4> v2Positions; // v2 buffer + original length
 StructuredBuffer<float4x4> grassWorldMatrix;
 
+float NormalizeDistance(float distance, float minDistance, float maxDistance)
+{
+    return (distance - minDistance) / (maxDistance - minDistance);
+}
+
+float RemapNormalizedDistance(float normalizedDistance, float near, float far)
+{
+    return near + normalizedDistance * (far - near);
+}
+
+// Usage example
+float RemapDistance(float distance, float minDistance, float maxDistance, float near, float far)
+{
+    float normalizedDistance = NormalizeDistance(distance, minDistance, maxDistance);
+    return RemapNormalizedDistance(normalizedDistance, near, far);
+}
+
+
 // https://docs.unity3d.com/ScriptReference/Graphics.RenderMeshIndirect.html
 [numthreads(64, 1, 1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
@@ -20,17 +43,25 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 	// Ensure we only process valid points (TODO: no magic number)
 	if (id.x < 121)
 	{
+		// Get the blade orientation
 		float3 bladeDir = mul(grassWorldMatrix[id.x], float4(1.0f, 0, 0, 0)).xyz;
 		float3 bladeUp = mul(grassWorldMatrix[id.x], float4(0, 1.0f, 0, 0)).xyz;
 
+		// Get the blade positions
 		float3 groundPos = mul(grassWorldMatrix[id.x], float4(0, 0, 0, 1.0f)).xyz;
 		float3 v1PositionsWorld = mul(grassWorldMatrix[id.x], float4(v1Positions[id.x].xyz, 1.0f)).xyz;
 		float3 v2PositionsWorld = mul(grassWorldMatrix[id.x], float4(v2Positions[id.x].xyz, 1.0f)).xyz;
 		float3 midCurvePoint = 0.25f * groundPos + 0.5f * v1PositionsWorld + 0.25f * v2PositionsWorld; 
 		
+		// View direction
+		
 		float3 viewDir = (groundPos - cameraPos);
 		float viewDist = length(viewDir);
 		float3 normViewDir = viewDir / viewDist;
+
+		uint width, height;
+    	cameraDepthTexture.GetDimensions(width, height);
+
 		// Orientation
 		{
 			if (abs(dot(normViewDir, bladeDir)) > 0.98f)
@@ -50,6 +81,19 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 			bool midInView = clipPos.x >= -h && clipPos.x <= h && 
 						clipPos.y >= -h && clipPos.y <= h && 
 						clipPos.z >= -h && clipPos.z <= h;
+			
+			// Occlusion test on mid point
+			float worldSpaceVector = (midCurvePoint - cameraPos);
+			float worldDistance = length(worldSpaceVector);
+			const float nearFarRange = 1.0f / (nearFar.y - nearFar.x);
+			
+			// float4 screenPos = ComputeScreenPos(clipPos);
+			float2 ndc = clipPos.xy / clipPos.w;
+			float2 uv = (ndc * 0.5f + 0.5f);
+			float cdt = cameraDepthTexture.SampleLevel(pointClampSampler, uv, 0).r;
+			float depth = Linear01Depth(cdt); // [0, 1]
+			if (depth < (worldDistance - nearFar.x) * nearFarRange)
+				return; // discard
 
 			clipPos = mul(viewProjectionMatrix, float4(v2PositionsWorld, 1.0f));
 			h = clipPos.w + tolerance;
@@ -59,16 +103,15 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 			
 			if (!groundInView && !midInView && !tipInView)
 				return; // discard
+			
 		}
-		
+			
 		// Distance test
 		{
-			// projected distance
 			float3 dProj = abs(viewDir - bladeUp * dot(viewDir, bladeUp));
 			float maxDist = 1000.0f;
 		}
 
-		// Occlusion test
 		{
 
 		}
