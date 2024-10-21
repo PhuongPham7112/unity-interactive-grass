@@ -218,7 +218,9 @@ public class GrassModel : MonoBehaviour
         depthTexture = Shader.GetGlobalTexture("_CameraDepthTexture");
         if (depthTexture)
         {
-            grassCullingCS.SetTexture(cullingKernelIndex, "cameraDepthTexture", Shader.GetGlobalTexture("_CameraDepthTexture"));
+            grassCullingCS.SetTexture(cullingKernelIndex, "cameraDepthTexture", depthTexture);
+            grassCullingCS.SetInt("width", depthTexture.width);
+            grassCullingCS.SetInt("height", depthTexture.height);
         }
         grassCullingCS.Dispatch(cullingKernelIndex, numPoints / 8, 1, 1);
         AsyncGPUReadback.Request(visibleGrassCounterBuffer, OnCompleteReadback);

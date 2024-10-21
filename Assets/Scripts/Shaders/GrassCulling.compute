@@ -2,6 +2,8 @@
 #pragma kernel CSMain
 #include "UnityCG.cginc"
 
+uniform int width;
+uniform int height;
 uniform int2 nearFar;
 uniform float3 cameraPos;
 uniform float3 cameraForward;
@@ -37,6 +39,20 @@ float RemapDistance(float distance, float minDistance, float maxDistance, float 
     return RemapNormalizedDistance(normalizedDistance, near, far);
 }
 
+bool IsOccluded(float3 worldPos, float4 clipPos)
+{
+	float3 worldSpaceVector = (worldPos - cameraPos);
+	float worldDistance = length(worldSpaceVector);
+	const float nearFarRange = 1.0f / (nearFar.y - nearFar.x);
+	
+	float2 ndc = mul(viewProjectionMatrix, float4(worldPos, 1.0f)).xy / clipPos.w;
+	float2 uv = (ndc * 0.5f + 0.5f);
+	float cdt = cameraDepthTexture[int2(uv.x * width, uv.y * height)].r;
+	float depth = Linear01Depth(cdt); // [0, 1]
+	depth -= depthBias;
+	return depth < (worldDistance - nearFar.x) * nearFarRange;
+}
+
 
 // https://docs.unity3d.com/ScriptReference/Graphics.RenderMeshIndirect.html
 [numthreads(64, 1, 1)]
@@ -61,9 +77,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 		float viewDist = length(viewDir);
 		float3 normViewDir = viewDir / viewDist;
 
-		uint width, height;
-    	cameraDepthTexture.GetDimensions(width, height);
-
 		// Orientation
 		{
 			if (abs(dot(normViewDir, bladeDir)) > 0.98f)
@@ -82,21 +95,10 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 			h = clipPos.w + tolerance;
 			bool midInView = clipPos.x >= -h && clipPos.x <= h && 
 						clipPos.y >= -h && clipPos.y <= h && 
-						clipPos.z >= -h && clipPos.z <= h;
+						clipPos.z >= -h && clipPos.z <= h &&
+						!IsOccluded(midCurvePoint, clipPos);
 			
-			// Occlusion test on mid point
-			float worldSpaceVector = (midCurvePoint - cameraPos);
-			float worldDistance = length(worldSpaceVector);
-			const float nearFarRange = 1.0f / (nearFar.y - nearFar.x);
-			
-			// float4 screenPos = ComputeScreenPos(clipPos);
-			float2 ndc = clipPos.xy / clipPos.w;
-			float2 uv = (ndc * 0.5f + 0.5f);
-			float cdt = cameraDepthTexture[int2(uv.x * width, uv.y * height)].r;
-			float depth = Linear01Depth(cdt); // [0, 1]
-			depth -= depthBias;
-			outputTexture[int2(uv.xy * 256)] = float4(depth, 0.0f, 0.0f, 1.0f);
-			if (depth < (worldDistance - nearFar.x) * nearFarRange)
+			if (IsOccluded(midCurvePoint, clipPos))
 				return; // discard
 
 			clipPos = mul(viewProjectionMatrix, float4(v2PositionsWorld, 1.0f));
