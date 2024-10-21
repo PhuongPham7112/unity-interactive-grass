@@ -8,8 +8,10 @@ uniform float3 cameraForward;
 uniform float4x4 viewMatrix;
 uniform float4x4 viewProjectionMatrix;
 uniform float tolerance = 0.5f;
+uniform float depthBias = 0.001f;
 SamplerState pointClampSampler;
 Texture2D<float4> cameraDepthTexture;
+RWTexture2D<float4> outputTexture;
 
 StructuredBuffer<int> indexGrass;
 RWStructuredBuffer<int> visibleIndexGrass;
@@ -90,8 +92,10 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 			// float4 screenPos = ComputeScreenPos(clipPos);
 			float2 ndc = clipPos.xy / clipPos.w;
 			float2 uv = (ndc * 0.5f + 0.5f);
-			float cdt = cameraDepthTexture.SampleLevel(pointClampSampler, uv, 0).r;
+			float cdt = cameraDepthTexture[int2(uv.x * width, uv.y * height)].r;
 			float depth = Linear01Depth(cdt); // [0, 1]
+			depth -= depthBias;
+			outputTexture[int2(uv.xy * 256)] = float4(depth, 0.0f, 0.0f, 1.0f);
 			if (depth < (worldDistance - nearFar.x) * nearFarRange)
 				return; // discard
 

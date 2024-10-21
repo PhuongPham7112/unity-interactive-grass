@@ -48,6 +48,7 @@ public class GrassModel : MonoBehaviour
     #endregion
 
     #region GRASS_CULLING_PARAMS
+    [SerializeField] RenderTexture rt;
     RenderParams rp;
     Mesh grassMesh;
     GraphicsBuffer commandBuf;
@@ -151,6 +152,11 @@ public class GrassModel : MonoBehaviour
         commandData[0].instanceCount = (visibilityCounterData[0]); // The number of instances to render.
         commandBuf.SetData(commandData);
 
+        // paint the whole render texture white
+        RenderTexture.active = rt;
+        GL.Clear(true, true, Color.white);
+        RenderTexture.active = null;
+
         grassCullingCS.SetVector("nearFar", new Vector2(cam.nearClipPlane, cam.farClipPlane));
         grassCullingCS.SetBuffer(cullingKernelIndex, "v1Positions", grass1PosBuffer);
         grassCullingCS.SetBuffer(cullingKernelIndex, "v2Positions", grass2PosBuffer);
@@ -158,6 +164,7 @@ public class GrassModel : MonoBehaviour
         grassCullingCS.SetBuffer(cullingKernelIndex, "indexGrass", visibleIndexGrassBuffer);
         grassCullingCS.SetBuffer(cullingKernelIndex, "visibleIndexGrass", visibleIndexGrassBuffer);
         grassCullingCS.SetBuffer(cullingKernelIndex, "visibleGrassCounterBuffer", visibleGrassCounterBuffer);
+        grassCullingCS.SetTexture(cullingKernelIndex, "outputTexture", rt);
         
         grassIndirectArgsCS.SetBuffer(argsKernelIndex, "indirectArgsBuffer", commandBuf);
         grassIndirectArgsCS.SetBuffer(argsKernelIndex, "visibleGrassCounterBuffer", visibleGrassCounterBuffer);
