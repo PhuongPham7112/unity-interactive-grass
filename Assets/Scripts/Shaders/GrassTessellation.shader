@@ -105,8 +105,8 @@ Shader "Custom/GrassTessellation"
                 float3 normal = normalize(cross(float3(1, 0, 0), tangent)); // should be provided
                 
                 // final vertex position
-                float3 c_0 = c - _Dimension.x * binormal;
-                float3 c_1 = c + _Dimension.x * binormal;
+                float3 c_0 = c - (1 - v) * _Dimension.x * binormal;
+                float3 c_1 = c + (1 - v) * _Dimension.x * binormal;
                 float3 vert =  c_0 + (c_1 - c_0) * u;
                 
                 // output

@@ -76,7 +76,6 @@ public class GrassModel : MonoBehaviour
         numPoints = gameObject.transform.childCount;
         numColliders = colliders.Length;
 
-        #region SIMULATION_SETUP
         // Fill the buffer with the v2 positions of the child objects
         visibilityCounterData = new uint[1];
         visibilityCounterData[0] = (uint)numPoints;
@@ -134,17 +133,13 @@ public class GrassModel : MonoBehaviour
         // Setup properties
         grassPhysicsCS.SetFloat("grassMass", grassMass);
         grassPhysicsCS.SetFloat("deltaTime", Time.deltaTime);
-
         grassPhysicsCS.SetFloat("numColliders", numColliders);
         grassPhysicsCS.SetFloat("stiffnessCoefficient", stiffnessCoefficient);
         grassPhysicsCS.SetFloat("collisionDecreaseAmount", collisionDecreaseAmount);
-        
         grassPhysicsCS.SetFloat("gravityParam", 0.0f);
         grassPhysicsCS.SetVector("gravityDirection", new Vector4(0, -1.0f, 0, 9.81f));
         grassPhysicsCS.SetVector("gravityPoint", new Vector4(0, 0, 0, 9.81f));
-        #endregion
 
-        #region CULLING_SETUP
         commandBuf = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments, commandCount, GraphicsBuffer.IndirectDrawIndexedArgs.size);
         commandData = new GraphicsBuffer.IndirectDrawIndexedArgs[commandCount];
         commandData[0].indexCountPerInstance = grassMesh.GetIndexCount(0); // The number of vertex indices per instance.
@@ -161,7 +156,6 @@ public class GrassModel : MonoBehaviour
         
         grassIndirectArgsCS.SetBuffer(argsKernelIndex, "indirectArgsBuffer", commandBuf);
         grassIndirectArgsCS.SetBuffer(argsKernelIndex, "visibleGrassCounterBuffer", visibleGrassCounterBuffer);
-        #endregion
 
         grassMaterial.SetBuffer("_V1Buffer", grass1PosBuffer);
         grassMaterial.SetBuffer("_V2Buffer", grass2PosBuffer);
@@ -178,12 +172,6 @@ public class GrassModel : MonoBehaviour
             collidersData[i][0] = colliders[i].transform.position.x;
             collidersData[i][1] = colliders[i].transform.position.y;
             collidersData[i][2] = colliders[i].transform.position.z;
-
-            // distance to cam
-            float dist = Vector3.Distance(colliders[i].transform.position, cam.transform.position);
-            // remap dist to [near, far]
-            float remap = (dist - cam.nearClipPlane) / (cam.farClipPlane - cam.nearClipPlane);
-            Debug.Log(remap);
         }
         collidersBuffer.SetData(collidersData);
         grassPhysicsCS.SetFloat("time", Time.time);
