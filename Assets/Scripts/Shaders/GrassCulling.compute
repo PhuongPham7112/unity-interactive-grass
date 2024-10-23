@@ -13,7 +13,6 @@ uniform float tolerance = 0.5f;
 uniform float depthBias = 0.001f;
 SamplerState pointClampSampler;
 Texture2D<float4> cameraDepthTexture;
-RWTexture2D<float4> outputTexture;
 
 StructuredBuffer<int> indexGrass;
 RWStructuredBuffer<int> visibleIndexGrass;
@@ -72,24 +71,24 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 		float3 midCurvePoint = 0.25f * groundPos + 0.5f * v1PositionsWorld + 0.25f * v2PositionsWorld; 
 		
 		// View direction
-		
 		float3 viewDir = (groundPos - cameraPos);
 		float viewDist = length(viewDir);
 		float3 normViewDir = viewDir / viewDist;
 
-		// Orientation
+		// Orientation Culling
 		{
 			if (abs(dot(normViewDir, bladeDir)) > 0.98f)
 				return; // discard
 		}
 
-		// View Frustum Culling
+		// View Frustum + Occlusion Culling
 		{
 			float4 clipPos = mul(viewProjectionMatrix, float4(groundPos, 1.0f));
 			float h = clipPos.w + tolerance;
 			bool groundInView = clipPos.x >= -h && clipPos.x <= h && 
 						clipPos.y >= -h && clipPos.y <= h && 
-						clipPos.z >= -h && clipPos.z <= h;
+						clipPos.z >= -h && clipPos.z <= h &&
+						!IsOccluded(groundPos, clipPos);
 
 			clipPos = mul(viewProjectionMatrix, float4(midCurvePoint, 1.0f));
 			h = clipPos.w + tolerance;
@@ -97,29 +96,17 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 						clipPos.y >= -h && clipPos.y <= h && 
 						clipPos.z >= -h && clipPos.z <= h &&
 						!IsOccluded(midCurvePoint, clipPos);
-			
-			if (IsOccluded(midCurvePoint, clipPos))
-				return; // discard
 
 			clipPos = mul(viewProjectionMatrix, float4(v2PositionsWorld, 1.0f));
 			h = clipPos.w + tolerance;
 			bool tipInView = clipPos.x >= -h && clipPos.x <= h && 
 						clipPos.y >= -h && clipPos.y <= h && 
-						clipPos.z >= -h && clipPos.z <= h;
+						clipPos.z >= -h && clipPos.z <= h &&
+						!IsOccluded(v2PositionsWorld, clipPos);
 			
 			if (!groundInView && !midInView && !tipInView)
 				return; // discard
 			
-		}
-			
-		// Distance test
-		{
-			float3 dProj = abs(viewDir - bladeUp * dot(viewDir, bladeUp));
-			float maxDist = 1000.0f;
-		}
-
-		{
-
 		}
 		uint val;
 		InterlockedAdd(visibleGrassCounterBuffer[0], 1, val);
