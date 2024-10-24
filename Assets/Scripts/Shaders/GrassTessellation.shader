@@ -102,7 +102,7 @@ Shader "Custom/GrassTessellation"
                 // coordinate systems
                 float3 tangent = normalize(b - a);
                 float3 binormal = float3(1, 0, 0);
-                float3 normal = normalize(cross(float3(1, 0, 0), tangent)); // should be provided
+                float3 normal = normalize(cross(binormal, tangent)); // should be provided
                 
                 // final vertex position
                 float3 c_0 = c - (1 - v) * _Dimension.x * binormal;
