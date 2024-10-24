@@ -168,60 +168,9 @@ Shader "Custom/GrassTessellation"
                 return output;
             }
 
-            //[maxvertexcount(200)]
-            //void geom(triangle TSInterpolators IN[3], inout TriangleStream<GSOutput> triStream)
-            //{
-            //    GSOutput o;
-            //    float3 offset;
-
-            //    // newly generated geo
-            //    for (int i = 0; i < 3; i++)
-            //    {
-            //        if (i == 0)
-            //        {
-            //            offset = float3(0.1, 0, 0);
-            //        }
-            //        else if (i == 1)
-            //        {
-            //            offset = float3(-0.1, 0, 0);
-            //        }
-            //        else if (i == 2)
-            //        {
-            //            offset = float3(0, 0, .2);
-            //        }
-
-            //        float3 positionOS = mul(unity_WorldToObject, float4(IN[0].positionWS, 1.0)).xyz;
-            //        float3 vNormal = mul(unity_WorldToObject, float4(IN[0].normalWS, 1.0)).xyz;
-            //        float3 vTangent = mul(unity_WorldToObject, float4(IN[0].tangentWS, 1.0)).xyz;
-            //        float3 vBinormal = cross(vNormal, vTangent);
-
-            //        float3x3 tangentToObject = float3x3(
-            //            vTangent.x, vBinormal.x, vNormal.x,
-            //            vTangent.y, vBinormal.y, vNormal.y,
-            //            vTangent.z, vBinormal.z, vNormal.z
-            //            );
-
-            //        float3 offsetOS = mul(tangentToObject, offset);
-            //        o.positionCS = UnityObjectToClipPos(positionOS + offsetOS);
-            //        triStream.Append(o);
-            //    }
-            //    triStream.RestartStrip();
-
-            //    // already have geo
-            //    o.positionCS = IN[0].positionCS;
-            //    triStream.Append(o);
-
-            //    o.positionCS = IN[1].positionCS;
-            //    triStream.Append(o);
-
-            //    o.positionCS = IN[2].positionCS;
-            //    triStream.Append(o);
-
-            //    triStream.RestartStrip();
-            //}
-
             float4 frag(TSInterpolators tc) : SV_Target
             {
+
                 return _Color * tc.color;
             }
 

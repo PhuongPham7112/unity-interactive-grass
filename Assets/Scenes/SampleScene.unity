@@ -4468,7 +4468,7 @@ MonoBehaviour:
   collisionDecreaseAmount: 2
   stiffnessCoefficient: 0.2
   grassMass: 0.1
-  grassWidth: 1
+  grassWidth: 2
   grassHeight: 2
   numPoints: 0
   numColliders: 0

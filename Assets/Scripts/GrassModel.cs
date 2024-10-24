@@ -7,7 +7,6 @@ using UnityEngine.Rendering;
 public class GrassModel : MonoBehaviour
 {
 
-    #region GRASS_PHYSICS_PARAMS
     private int physicsKernelIndex;
     private int cullingKernelIndex;
     private int argsKernelIndex;
@@ -45,16 +44,12 @@ public class GrassModel : MonoBehaviour
     [SerializeField] private int numPoints;
     [SerializeField] private int numColliders;
     private MaterialPropertyBlock propertyBlock;
-    #endregion
 
-    #region GRASS_CULLING_PARAMS
     RenderParams rp;
     Mesh grassMesh;
     GraphicsBuffer commandBuf;
     GraphicsBuffer.IndirectDrawIndexedArgs[] commandData;
     const int commandCount = 1;
-    #endregion
-
 
     // Start is called before the first frame update
     void Start()

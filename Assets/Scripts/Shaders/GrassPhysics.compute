@@ -47,6 +47,12 @@ float BezierCurveArcLength(float2 v0, float2 v1, float2 v2)
     return 0.5f * length;
 }
 
+// TODO: implement simplex noise
+float SimplexNoise(float3 pos)
+{
+    return 0.0f;
+}
+
 float3 WindFunction(float3 pos)
 {
     // Wind parameters
